@@ -1,5 +1,5 @@
-TOPDIR=$(shell pwd)
-SUBDIR=lib
+PROJ_ROOT=$(shell pwd)
+SUBDIR=lib command ftom
 
 export TOPDIR
 
@@ -15,9 +15,9 @@ install:
 		make -C $$dir install;\
 	done
 
-dev_install:
+depend:
 	@for dir in $(SUBDIR); do\
-		make -C $$dir dev_install;\
+		make -C $$dir depend;\
 	done
 
 clean:
