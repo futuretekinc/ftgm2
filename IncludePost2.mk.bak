@@ -7,10 +7,11 @@ ALL_LIBS = $(LIBS)
 ALL_LIBS += -lpthread
 
 TARGET_OBJS = $(TARGET_SRCS:%.cpp=$(OBJS_DIR)/%.o)
+#TARGET_NAMES = $(TARGET_SRCS:%.cpp=$(OBJS_DIR)/%)
 
 .SUFFIXES : .cpp .o
 
-all : $(LIB_FULL_NAME) $(TARGET_NAME)
+all : $(LIB_FULL_NAME) $(TARGET_NAMES)
 
 $(LIB_FULL_NAME) : $(LIB_OBJS)
 	@`[ -d $(ROOT_LIB_DIR)/$(OBJS_DIR) ] || $(MKDIR) -p $(ROOT_LIB_DIR)/$(OBJS_DIR)`
@@ -25,14 +26,14 @@ $(OBJS_DIR)/%.o : %.cpp
 	$(CC) $(CFLAGS) $(DBG_FLAGS) $(INC_DIRS) -c $< -o $@
 
 .SECONDEXPANSION:
-$(TARGET_NAME): $(TARGET_OBJS)
+$(TARGET_NAME): $$@.o
 	@echo "==================================================="
 	@echo "= Linking $@ "
 	@echo "==================================================="
 ifeq ($(LIBS_CYCLING_DEPEND),1)
-	$(CC) -o $(OBJS_DIR)/$@ $< $(LIB_DIRS) -Wl,-\( $(ALL_LIBS) -Wl,-\)
+	$(CC) -o $@ $< $(LIB_DIRS) -Wl,-\( $(ALL_LIBS) -Wl,-\)
 else
-	$(CC) -o $(OBJS_DIR)/$@ $< $(LIB_DIRS) $(ALL_LIBS)
+	$(CC) -o $@ $< $(LIB_DIRS) $(ALL_LIBS)
 endif
 
 depend :
