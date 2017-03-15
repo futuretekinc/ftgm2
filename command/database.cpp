@@ -11,12 +11,12 @@ RetValue	ShellCommandDatabase
 (
 	std::string* _arguments, 
 	uint32_t	_count,
-	Shell<ObjectManager, DataManager>* _shell
+	Shell<ObjectManager>* _shell
 )
 {
 	RetValue	ret_value;
-	ObjectManager*	object_manager = _shell->Data1();
-	DataManager*	data_manager = _shell->Data2();
+	ObjectManager*	object_manager = _shell->Data();
+	DataManager*	data_manager = object_manager->GetDataManager();
 
 	if (object_manager == NULL)
 	{

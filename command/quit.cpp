@@ -7,23 +7,14 @@
 
 using namespace std;
 
-RetValue	ShellCommandHelp
+RetValue	ShellCommandQuit
 (
 	std::string* _arguments, 
 	uint32_t	_count,
 	Shell<ObjectManager>* _shell
 )
 {
-	RetValue	ret_value;
-	size_t		title_width = 16;
+	_shell->Stop();
 
-	if (_count == 1)
-	{
-		cout << "Help called" << endl;
-	}
-	else 
-	{
-	}
-
-	return	ret_value;
+	return	RET_VALUE_OK;
 }

@@ -10,23 +10,24 @@
 #include "object_manager.h"
 #include <iostream>
 
-template <typename T1, typename T2>	class	ShellCommand;
+template <typename T>	class	ShellCommand;
 
-template <typename T1, typename T2>
+template <typename T>
 class	Shell
 {
 public:
-	Shell(ShellCommand<T1, T2>* _commands, int 	_command_count, T1* _data1, T2* _data2)
+	Shell(ShellCommand<T>* _commands, int 	_command_count, T* _data)
 	{
 		out_	= &std::cout;
-		data1_ 	= _data1;
-		data2_ 	= _data2;
+		data_ 	= _data;
 		thread_ = NULL;
 		stop_ 	= true;
+		sync_   = false;
+		prompt_	= "shell";
 
 		for(int i = 0 ; i < _command_count ; i++)
 		{
-			typename std::map<const std::string, ShellCommand<T1, T2> *>::iterator it = command_map_.find(_commands[i].command);
+			typename std::map<const std::string, ShellCommand<T> *>::iterator it = command_map_.find(_commands[i].command);
 			if (it == command_map_.end())
 			{
 				TRACE(NULL, "Add command[%s]", _commands[i].command.c_str());
@@ -41,17 +42,15 @@ public:
 
 	~Shell()
 	{
-		typename std::map<const std::string, ShellCommand<T1, T2> *>::iterator	it = command_map_.begin();
+		typename std::map<const std::string, ShellCommand<T> *>::iterator	it = command_map_.begin();
 		for(;it != command_map_.end() ; it++)
 		{
-			delete it->second;
 		}
 	}
 
 	std::ostream&	Out()	{	return	*out_; }
 
-	T1*	Data1()	{	return	data1_;	}
-	T2*	Data2()	{	return	data2_;	}
+	T*	Data()	{	return	data_;	}
 
 	RetValue	Start(bool _sync = false)
 	{
@@ -67,11 +66,10 @@ public:
 			usleep(1000);		
 		}
 
-		if (_sync)
+		sync_ = _sync;
+		if (sync_)
 		{
 			thread_->join();	
-
-			delete thread_;
 
 			thread_ = NULL;
 		}
@@ -81,25 +79,20 @@ public:
 
 	RetValue	Stop()
 	{
-		if (thread_ != NULL)
-		{
-			delete thread_;
-
-			thread_ = NULL;
-		}
+		stop_ = true;
 
 		return	RET_VALUE_OK;
 	}
 
 
-	void	Add(ShellCommand<T1, T2>* _commands, int 	_command_count)
+	void	Add(ShellCommand<T>* _commands, int 	_command_count)
 	{
 		thread_ = NULL;
 		stop_ 	= true;
 
 		for(int i = 0 ; i < _command_count ; i++)
 		{
-			typename std::map<const std::string, ShellCommand<T1, T2> *>::iterator it = command_map_.find(_commands[i].command);
+			typename std::map<const std::string, ShellCommand<T> *>::iterator it = command_map_.find(_commands[i].command);
 			if (it == command_map_.end())
 			{
 				TRACE(NULL, "Add command[%s]", _commands[i].command.c_str());
@@ -113,12 +106,12 @@ public:
 	}
 
 protected:
-	T1*				data1_;
-	T2*				data2_;
+	T*				data_;
 	std::thread*	thread_;
 	bool			stop_;
+	bool			sync_;
 	std::string		prompt_;
-	std::map<const std::string, ShellCommand<T1, T2>*>	command_map_;
+	std::map<const std::string, ShellCommand<T>*>	command_map_;
 	std::ostream	*out_;
 
 	static
@@ -167,10 +160,10 @@ protected:
 			std::getline(std::cin, command_line);
 			count = 0;
 
-			count = Shell<T1, T2>::Parser(command_line, arguments, 16);
+			count = Shell<T>::Parser(command_line, arguments, 16);
 			if (count != 0)
 			{
-				typename std::map<const std::string, ShellCommand<T1, T2>*>::iterator it = _shell->command_map_.find(arguments[0])	;
+				typename std::map<const std::string, ShellCommand<T>*>::iterator it = _shell->command_map_.find(arguments[0])	;
 				if (it != _shell->command_map_.end())
 				{
 					it->second->function(arguments, count, _shell);
@@ -181,6 +174,8 @@ protected:
 				}
 			}
 		}
+
+		std::cout << "finished." << std::endl;
 	}
 	
 };

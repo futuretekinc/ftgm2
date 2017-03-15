@@ -12,45 +12,53 @@ RetValue	ShellCommandDevice
 (
 	std::string* _arguments, 
 	uint32_t	_count,
-	Shell<ObjectManager, DataManager>* _shell
+	Shell<ObjectManager>* _shell
 );
 
 RetValue	ShellCommandEndpoint
 (
 	std::string* _arguments, 
 	uint32_t	_count,
-	Shell<ObjectManager, DataManager>* _shell
+	Shell<ObjectManager>* _shell
 );
 
 RetValue	ShellCommandDatabase
 (
 	std::string* _arguments, 
 	uint32_t	_count,
-	Shell<ObjectManager, DataManager>* _shell
+	Shell<ObjectManager>* _shell
 );
 
 RetValue	ShellCommandDebug
 (
 	std::string* _arguments, 
 	uint32_t	_count,
-	Shell<ObjectManager, DataManager>* _shell
+	Shell<ObjectManager>* _shell
 );
 
 RetValue	ShellCommandHelp
 (
 	std::string* _arguments, 
 	uint32_t	_count,
-	Shell<ObjectManager, DataManager>* _shell
+	Shell<ObjectManager>* _shell
 );
 
-ShellCommand<ObjectManager, DataManager>	object_manager_shell_commands[] = 
+RetValue	ShellCommandQuit
+(
+	std::string* _arguments, 
+	uint32_t	_count,
+	Shell<ObjectManager>* _shell
+);
+
+ShellCommand<ObjectManager>	object_manager_shell_commands[] = 
 {
-	ShellCommand<ObjectManager, DataManager>("device", 	"devcice", 	"device", 	ShellCommandDevice),
-	ShellCommand<ObjectManager, DataManager>("endpoint","endpoint", "endpoint", ShellCommandEndpoint),
-	ShellCommand<ObjectManager, DataManager>("database","database",	"database",	ShellCommandDatabase),
-	ShellCommand<ObjectManager, DataManager>("debug", 	"debug", 	"debug", 	ShellCommandDebug),
-	ShellCommand<ObjectManager, DataManager>("help", 	"help", 	"help", 	ShellCommandHelp),
-	ShellCommand<ObjectManager, DataManager>("?", 	"help", 	"help", 		ShellCommandHelp)
+	ShellCommand<ObjectManager>("device", 	"devcice", 	"device", 	ShellCommandDevice),
+	ShellCommand<ObjectManager>("endpoint","endpoint", "endpoint", 	ShellCommandEndpoint),
+	ShellCommand<ObjectManager>("debug", 	"debug", 	"debug", 	ShellCommandDebug),
+	ShellCommand<ObjectManager>("help", 	"help", 	"help", 	ShellCommandHelp),
+	ShellCommand<ObjectManager>("?", 		"help", 	"help", 	ShellCommandHelp),
+	ShellCommand<ObjectManager>("quit",		"quit", 	"quit",		ShellCommandQuit)
 };
 
-int	object_manager_shell_command_count = sizeof(object_manager_shell_commands) / sizeof(ShellCommand<ObjectManager, DataManager>);
+int	object_manager_shell_command_count = sizeof(object_manager_shell_commands) / sizeof(ShellCommand<ObjectManager>);
+

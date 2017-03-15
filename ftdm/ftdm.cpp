@@ -4,8 +4,8 @@
 #include <cstring>
 #include <mutex>
 #include <unistd.h>
+#include <errno.h>
 #include "trace.h"
-#include "object_manager.h"
 #include "snmp_object.h"
 #include "snmp_client.h"
 #include "device.h"
@@ -16,9 +16,6 @@
 #include "data_manager.h"
 
 using namespace std;
-
-extern	ShellCommand<ObjectManager>	object_manager_shell_commands[];
-extern	int	object_manager_shell_command_count;
 
 int main
 (
@@ -55,31 +52,25 @@ int main
 		}   
 	}   
 
-	ObjectManager*	om = new ObjectManager;
 	DataManager*	dm = new DataManager;
 
 	TRACE_ON();
 	ERROR_ON();
 
-	om->Load(config_file_name);
-	om->Connect(dm);
+	dm->Load(config_file_name);
 
-	om->Start();
+	dm->Start(1000);
 
 	if (start_shell)
 	{
-		Shell<ObjectManager>	shell(object_manager_shell_commands, object_manager_shell_command_count, om);
+		Shell<DataManager>	shell(data_manager_shell_commands, data_manager_shell_command_count, dm);
 
 		shell.Start(true);
 	}
 
-	om->Stop();
-	om->Disconnect(dm);
-
 	dm->Stop();
 
 	delete dm;
-	delete om;
 
 	return	0;	
 }

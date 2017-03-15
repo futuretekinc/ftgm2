@@ -11,11 +11,11 @@ RetValue	ShellCommandDevice
 (
 	std::string* _arguments, 
 	uint32_t	_count,
-	Shell<ObjectManager, DataManager>* _shell
+	Shell<ObjectManager>* _shell
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
-	ObjectManager*	object_manager = _shell->Data1();
+	ObjectManager*	object_manager = _shell->Data();
 
 	if (object_manager == NULL)
 	{

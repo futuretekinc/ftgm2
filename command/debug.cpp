@@ -11,7 +11,7 @@ RetValue	ShellCommandDebug
 (
 	std::string* _arguments, 
 	uint32_t	_count,
-	Shell<ObjectManager, DataManager>* _shell
+	Shell<ObjectManager>* _shell
 )
 {
 	RetValue	ret_value;

@@ -54,6 +54,7 @@ public:
 
 protected:
 	void		PreProcess();
+	void		PostProcess();
 
 	RetValue	LoadDevice(const JSONNode& _json_node);
 	RetValue	LoadEndpoint(const JSONNode& _json_node);
