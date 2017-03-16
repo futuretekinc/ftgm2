@@ -77,7 +77,7 @@ RetValue	EndpointSensorTemperature::Synchronize()
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	if (device_ == NULL)
+	if (parent_ == NULL)
 	{
 		ret_value = RET_VALUE_NOT_ATTACHED_TO_DEVICE;
 		ERROR(this, ret_value, "The endpoint[%s] is not attached to device.", properties_.id.c_str());
@@ -85,7 +85,9 @@ RetValue	EndpointSensorTemperature::Synchronize()
 	}
 	else
 	{
-		device_->GetValue(this);
+		Device *device = (Device *)parent_;
+
+		device->GetValue(this);
 
 		TRACE(this, "The endpoint[%s] was synchronized.", properties_.id.c_str());
 	}

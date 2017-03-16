@@ -63,9 +63,8 @@ int main
 
 	om->Load(config_file_name);
 	om->Connect(dm);
-
+	
 	om->Start();
-
 	if (start_shell)
 	{
 		Shell<ObjectManager>	shell(object_manager_shell_commands, object_manager_shell_command_count, om);
@@ -75,8 +74,6 @@ int main
 
 	om->Stop();
 	om->Disconnect(dm);
-
-	dm->Stop();
 
 	delete dm;
 	delete om;

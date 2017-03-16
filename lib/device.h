@@ -75,7 +75,8 @@ public:
 	// Interface 
 	Type			GetType()	{	return	properties_.type;	};
 	const 
-	std::string&	GetID()		{	return	properties_.id;	};
+	std::string&	GetID();
+	//std::string&	GetID()		{	return	properties_.id;	};
 	const 
 	std::string&	GetName()	{	return	properties_.name;	};
 	void			SetName(const std::string& _name);
@@ -136,11 +137,6 @@ public:
 	friend std::ostream& operator<<(std::ostream& _os, const Device& _device);
 
 protected:
-	RetValue		SetObjectManager(ObjectManager* _object_manager);
-	ObjectManager*	GetObjectManager()	{	return	object_manager_;	}
-	RetValue		ReleaseObjectManager();
-
-
 	// Internal functions
 	void			PreProcess();
 	void			Process();
@@ -151,7 +147,6 @@ protected:
 
 	Properties		properties_;
 	
-	ObjectManager*	object_manager_;
 	std::thread*	schedule_thread_;
 	bool			schedule_stop_;
 	bool			activation_;

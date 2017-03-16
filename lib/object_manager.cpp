@@ -23,17 +23,12 @@ ObjectManager::~ObjectManager()
 	map<const string, Device *>::iterator device_it = device_map_.begin();
 	for(; device_it != device_map_.end() ; device_it++)
 	{
-		delete device_it->second;
-	}
-
-	map<const string, Endpoint *>::iterator endpoint_it = endpoint_map_.begin();
-	for(; endpoint_it != endpoint_map_.end() ; endpoint_it++)
-	{
-		delete endpoint_it->second;
+//		delete device_it->second;
 	}
 }
 
-const std::string	ObjectManager::ClassName()
+const 
+std::string&	ObjectManager::ClassName()
 {
 	return	typeid(*this).name();
 }
@@ -88,7 +83,6 @@ RetValue	ObjectManager::Load
 		if (libjson::is_valid(buffer) == true)
 		{
 			JSONNode	root = libjson::parse(buffer);
-
 			for(size_t i = 0 ; i < root.size() ; i++)
 			{
 				if (root[i].name() == "device")
@@ -97,7 +91,6 @@ RetValue	ObjectManager::Load
 				}
 			}
 		}
-
 		delete	[] buffer;
 
 		return	RET_VALUE_OK;
@@ -105,7 +98,7 @@ RetValue	ObjectManager::Load
 	catch(exception& e)
 	{
 		ret_value = RET_VALUE_EXCEPTION;
-		ERROR(this, ret_value, e.what());
+		ERROR(this, ret_value, "***"/*e.what()*/);
 
 		return	ret_value;
 	}
@@ -127,20 +120,7 @@ RetValue	ObjectManager::Connect
 		TRACE(this, "The device[%s] was connected", _device->GetID().c_str());
 		device_map_[_device->GetID()] = _device;
 
-		_device->SetObjectManager(this);
-
-		for(uint32 i = 0 ; i < _device->GetEndpointCount() ; i++)
-		{
-			Endpoint*	endpoint = _device->GetEndpoint(i);
-			if (endpoint != NULL)
-			{
-				ret_value = Connect(endpoint);
-				if (ret_value != RET_VALUE_OK)
-				{
-					ERROR(this, ret_value, "Failed to attach endpoint to manager!");
-				}
-			}
-		}
+		_device->SetParent(this);
 	}
 
 	return	ret_value;
@@ -153,31 +133,19 @@ RetValue	ObjectManager::Disconnect
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	map<const string, Device *>::iterator it = device_map_.find(_device->GetID());
-	if (it != device_map_.end())
+	if (device_map_.erase(_device->GetID()) != 0)
 	{
-		device_map_.erase(_device->GetID());
-
-		_device->ReleaseObjectManager();
-
-		for(uint32 i = 0 ; i < _device->GetEndpointCount() ; i++)
-		{
-			Endpoint*	endpoint = _device->GetEndpoint(i);
-			if (endpoint != NULL)
-			{
-				ret_value = Disconnect(endpoint);
-				if (ret_value != RET_VALUE_OK)
-				{
-					ERROR(this, ret_value, "Failed to detach endpoint to manager!");
-				}
-			}
-		}
+		_device->ReleaseParent();
+	}
+	else
+	{
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
 	}
 
 	return	ret_value;
 }
 
-uint32		ObjectManager::DeviceCount()
+uint32		ObjectManager::GetDeviceCount()
 {
 	return	device_map_.size();
 }
@@ -229,6 +197,7 @@ RetValue	ObjectManager::LoadDevice
 	TRACE_ENTRY(this);
 	if(_json_node.type() == JSON_ARRAY)
 	{
+		cout << "JSON_ARRAY:: " << endl;
 		for(int i = 0 ; i < (int)_json_node.size() ; i++)
 		{
 			LoadDevice(_json_node[i]);	
@@ -238,6 +207,7 @@ RetValue	ObjectManager::LoadDevice
 	{
 		Device* device = NULL;
 
+		cout << "JSON_NODE:: " << endl;
 		JSONNode::const_iterator it=_json_node.find("type");
 		if (it == _json_node.end())
 		{
@@ -249,6 +219,7 @@ RetValue	ObjectManager::LoadDevice
 			Device::Properties*	properties = Device::Properties::Create(_json_node);
 			if (properties != NULL)
 			{
+				cout << "Device :: " << endl;
 				properties->Show();
 
 				device = Device::Create(properties);
@@ -310,7 +281,11 @@ void	ObjectManager::ShowDeviceList()
 		}
 	}
 
-	cout << setw(name_width) << "Name" << " " << setw(id_width) << "ID" << " " << setw(type_width) << "Type" << " " << setw(enable_width) << "Enable" << " " << setw(activation_width) << "Activation" << endl;
+	cout << setw(name_width) << "Name" << " ";
+	cout << setw(id_width) << "ID" << " " ;
+	cout << setw(type_width) << "Type" << " " ;
+	cout << setw(enable_width) << "Enable" << " ";
+	cout << setw(activation_width) << "Activation" << endl;
 	it = device_map_.begin();
 	for(; it != device_map_.end() ; it++)
 	{
@@ -342,44 +317,17 @@ void	ObjectManager::ShowDeviceList()
 ////////////////////////////////////////////////////////////////
 //	for Endpoint
 ////////////////////////////////////////////////////////////////
-RetValue	ObjectManager::Connect
-(
-	Endpoint*	_endpoint
-)
+uint32		ObjectManager::GetEndpointCount()
 {
-	RetValue	ret_value = RET_VALUE_OK;
+	uint32	endpoint_count = 0;
 
-	map<const string, Endpoint *>::iterator it = endpoint_map_.find(_endpoint->GetID());
-	if (it == endpoint_map_.end())
+	map<const string, Device *>::iterator it = device_map_.begin();
+	for(; it != device_map_.end() ; it++)
 	{
-		TRACE(this, "The endpoint[%s] was connected", _endpoint->GetID().c_str());
-		endpoint_map_[_endpoint->GetID()] = _endpoint;
-		_endpoint->SetObjectManager(this);
-	}
+		endpoint_count += it->second->GetEndpointCount();
+	}		
 
-	return	ret_value;
-}
-
-RetValue	ObjectManager::Disconnect
-(
-	Endpoint*	_endpoint
-)
-{
-	RetValue	ret_value = RET_VALUE_OK;
-
-	map<const string, Endpoint *>::iterator it = endpoint_map_.find(_endpoint->GetID());
-	if (it != endpoint_map_.end())
-	{
-		endpoint_map_.erase(_endpoint->GetID());
-		_endpoint->ReleaseObjectManager();
-	}
-
-	return	ret_value;
-}
-
-uint32		ObjectManager::EndpointCount()
-{
-	return	endpoint_map_.size();
+	return	endpoint_count;
 }
 
 Endpoint*		ObjectManager::GetEndpoint
@@ -387,17 +335,19 @@ Endpoint*		ObjectManager::GetEndpoint
 	uint32 _index
 )
 {
-	if (_index < endpoint_map_.size())
+	map<const string, Device *>::iterator it = device_map_.begin();
+	for(; it != device_map_.end() ; it++, _index--)
 	{
-		map<const string, Endpoint *>::iterator it = endpoint_map_.begin();
-		for(; it != endpoint_map_.end() ; it++, _index--)
+		if (_index > it->second->GetEndpointCount())
 		{
-			if (_index == 0)
-			{
-				return	it->second;	
-			}
-		}		
-	}
+			_index -= it->second->GetEndpointCount();
+		}
+		else
+		{
+			return	it->second->GetEndpoint(_index);
+		
+		}
+	}		
 
 	return	NULL;
 }
@@ -407,79 +357,17 @@ Endpoint*		ObjectManager::GetEndpoint
 	const string& _id
 )
 {
-	map<const string, Endpoint *>::iterator it = endpoint_map_.begin();
-	for(; it != endpoint_map_.end() ; it++)
+	map<const string, Device *>::iterator it = device_map_.begin();
+	for(; it != device_map_.end() ; it++)
 	{
-		if (it->first == _id)
+		Endpoint* endpoint = it->second->GetEndpoint(_id);
+		if (endpoint != NULL)
 		{
-			return	it->second;	
+			return	endpoint;	
 		}
 	}		
 
 	return	NULL;
-}
-
-RetValue	ObjectManager::LoadEndpoint
-(
-	const	JSONNode& _json_node
-)
-{
-	RetValue ret_value = RET_VALUE_OK;
-
-	if(_json_node.type() == JSON_ARRAY)
-	{
-		for(int i = 0 ; i < (int)_json_node.size() ; i++)
-		{
-			LoadEndpoint(_json_node[i]);	
-		}
-	}
-	else if (_json_node.type() == JSON_NODE)
-	{
-		Endpoint* endpoint = NULL;
-
-		JSONNode::const_iterator it=_json_node.find("type");
-		if (it == _json_node.end())
-		{
-			ret_value = RET_VALUE_INVALID_TYPE;
-			ERROR(this, ret_value, "type not found!");
-		}
-		else
-		{
-			for(size_t i = 0 ; i < _json_node.size() ; i++)
-			{
-				const JSONNode& child_node = _json_node[i];
-
-				if (child_node.name() == "type")
-				{
-					Endpoint::Type	type = Endpoint::StringToType(child_node.as_string());
-					if (type != Endpoint::TYPE_UNKNOWN)
-					{
-						endpoint = Endpoint::Create(type);
-						break;
-					}
-				}
-
-			}
-
-			if (endpoint == NULL)
-			{
-				ret_value = RET_VALUE_INVALID_TYPE;	
-				ERROR(this, ret_value, "");
-			}
-			else
-			{
-				endpoint->SetProperties(_json_node);
-				endpoint_map_[endpoint->GetID()] = endpoint;
-			}
-		}
-	}
-	else
-	{
-		ret_value = RET_VALUE_INVALID_TYPE;
-		ERROR(this, ret_value, "Object is not node!");
-	}
-
-	return	ret_value;
 }
 
 ///////////////////////////////////////////////////////
@@ -594,29 +482,30 @@ void	ObjectManager::OnQuit
 
 void	ObjectManager::ShowEndpointList()
 {
-	size_t	name_width 	= 16;
-	size_t	id_width	= 16;
-	size_t	type_width	= 8;
-	size_t	index_width = 8;
+	size_t	name_width 		= 16;
+	size_t	id_width		= 16;
+	size_t	type_width		= 8;
+	size_t	index_width 	= 8;
 	size_t	device_id_width = 16;
-	size_t	enable_width = 8;
+	size_t	enable_width 	= 8;
 	size_t	activation_width= 10;
 	size_t	value_count_width=32;
 
-	map<const string, Endpoint *>::iterator it = endpoint_map_.begin();
-	for(; it != endpoint_map_.end() ; it++)
+	for(size_t i = 0 ; i < GetEndpointCount() ; i++)
 	{
-		if (name_width < it->second->GetName().length())
+		Endpoint* endpoint = GetEndpoint(i);
+
+		if (name_width < endpoint->GetName().length())
 		{
-			name_width = it->second->GetName().length();
+			name_width = endpoint->GetName().length();
 		}
 
-		if (id_width < it->second->GetID().length())
+		if (id_width < endpoint->GetID().length())
 		{
-			id_width = it->second->GetID().length();
+			id_width = endpoint->GetID().length();
 		}
 
-		const string	type = Endpoint::TypeToString(it->second->GetType());
+		const string	type = Endpoint::TypeToString(endpoint->GetType());
 		if (type_width < type.length())
 		{
 			type_width = type.length();
@@ -632,25 +521,25 @@ void	ObjectManager::ShowEndpointList()
 	cout << " " << setw(device_id_width) << "Device" ;
 	cout << " " << setw(value_count_width) << "Value" << endl;
 
-	it = endpoint_map_.begin();
-	for(; it != endpoint_map_.end() ; it++)
+	for(size_t i = 0 ; i < GetEndpointCount() ; i++)
 	{
+		Endpoint* endpoint = GetEndpoint(i);
 		ostringstream	buffer;
 
-		cout << setw(name_width) << it->second->GetName();
-		cout << " " << setw(id_width) << it->second->GetID();
-		if (Endpoint::TypeToString(it->second->GetType()).length() != 0)
+		cout << setw(name_width) << endpoint->GetName();
+		cout << " " << setw(id_width) << endpoint->GetID();
+		if (Endpoint::TypeToString(endpoint->GetType()).length() != 0)
 		{
-			cout << " " << setw(type_width) << Endpoint::TypeToString(it->second->GetType());
+			cout << " " << setw(type_width) << Endpoint::TypeToString(endpoint->GetType());
 		}
 		else
 		{
-			cout << " " << setw(type_width) << it->second->GetType();
+			cout << " " << setw(type_width) << endpoint->GetType();
 		}
 
-		cout << " " << setw(index_width) << it->second->GetIndex();
+		cout << " " << setw(index_width) << endpoint->GetIndex();
 
-		if (it->second->IsEnabled())
+		if (endpoint->IsEnabled())
 		{
 			cout << " " << setw(enable_width) << "on";
 		}
@@ -659,7 +548,7 @@ void	ObjectManager::ShowEndpointList()
 			cout << " " << setw(enable_width) << "off";
 		}
 
-		if (it->second->IsActivated())
+		if (endpoint->IsActivated())
 		{
 			cout << " " << setw(activation_width) << "on";
 		}
@@ -669,20 +558,20 @@ void	ObjectManager::ShowEndpointList()
 		}
 
 
-		if (it->second->GetDevice() != NULL)
+		if (endpoint->GetParent() != NULL)
 		{
-			cout << " " << setw(device_id_width) << it->second->GetDevice()->GetID();
+			cout << " " << setw(device_id_width) << ((Device *)endpoint->GetParent())->GetID();
 		}
 		else
 		{
 			cout << " " << setw(device_id_width) << setfill(' ') << "";
 		}
 
-		TimedValue value = it->second->GetValue();
+		TimedValue value = endpoint->GetValue();
 		buffer << value.ToString() << "[" << value.GetTime().ToString() << "]";
 		cout << " " << setw(value_count_width) << buffer.str();
 		
-		cout << " " << it->second->ValueCount();
+		cout << " " << endpoint->ValueCount();
 		cout << endl;
 		
 	}

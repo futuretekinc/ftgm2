@@ -121,3 +121,8 @@ void Object::Trace
 		out << output_buffer << endl;
 	}
 }
+
+void	Object::ReleaseParent()
+{
+	parent_ = NULL;
+}

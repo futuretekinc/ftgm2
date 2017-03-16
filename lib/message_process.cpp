@@ -53,9 +53,7 @@ RetValue	MessageProcess::Stop()
 {
 	if (thread_ != NULL)
 	{
-		Message *message = new MessageQuit();
-
-		Post(message);
+		Post(new MessageQuit());
 
 		thread_->join();
 
@@ -141,8 +139,8 @@ void MessageProcess::Thread
 		timeout.Add(_mp->loop_interval_);
 	
 		_mp->Process();
-		
-		if (_mp->message_queue_.TimedWait(timeout.RemainTime()))
+
+		while ((!_mp->stop_) && (_mp->message_queue_.TimedWait(timeout.RemainTime())))
 		{
 			Message* message = _mp->message_queue_.Pop();		
 

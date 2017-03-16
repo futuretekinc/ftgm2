@@ -24,18 +24,16 @@ public:
 	~ObjectManager();
 
 	const 
-	std::string	ClassName();
+	std::string&	ClassName();
 
 	RetValue	Connect(Device *_device);
 	RetValue	Disconnect(Device *_device);
-	uint32		DeviceCount();
+	uint32		GetDeviceCount();
 	Device*		GetDevice(uint32 _index);
 	Device*		GetDevice(const std::string& _id);
 	void		ShowDeviceList();
 
-	RetValue	Connect(Endpoint *_endpoint);
-	RetValue	Disconnect(Endpoint *_endpoint);
-	uint32		EndpointCount();
+	uint32		GetEndpointCount();
 	Endpoint*	GetEndpoint(uint32 _index);
 	Endpoint*	GetEndpoint(const std::string& _id);
 	void		ShowEndpointList();
@@ -57,10 +55,8 @@ protected:
 	void		PostProcess();
 
 	RetValue	LoadDevice(const JSONNode& _json_node);
-	RetValue	LoadEndpoint(const JSONNode& _json_node);
 
 	std::map<const std::string, Device *>		device_map_;
-	std::map<const std::string, Endpoint *> 	endpoint_map_;
 	DataManager*								data_manager_;
 };
 

@@ -24,6 +24,7 @@ public:
 		stop_ 	= true;
 		sync_   = false;
 		prompt_	= "shell";
+		max_command_witdh_ = 8;
 
 		for(int i = 0 ; i < _command_count ; i++)
 		{
@@ -32,6 +33,7 @@ public:
 			{
 				TRACE(NULL, "Add command[%s]", _commands[i].command.c_str());
 				command_map_[_commands[i].command] = &_commands[i];	
+
 			}
 			else
 			{
@@ -105,6 +107,29 @@ public:
 		}
 	}
 
+	uint32	GetCommandCount()
+	{
+		return	command_map_.size();	
+	}
+
+	ShellCommand<T>*	GetCommandAt(uint32 index)
+	{
+		typename std::map<const std::string, ShellCommand<T>*>::iterator it = command_map_.begin();
+
+		while (it != command_map_.end()) 
+		{
+			if (index == 0)
+			{
+				return	it->second;
+			}
+
+			index--;
+			it++;
+		}
+
+		return	NULL;
+	}
+
 protected:
 	T*				data_;
 	std::thread*	thread_;
@@ -113,6 +138,7 @@ protected:
 	std::string		prompt_;
 	std::map<const std::string, ShellCommand<T>*>	command_map_;
 	std::ostream	*out_;
+	uint32			max_command_witdh_;
 
 	static
 	int		Parser

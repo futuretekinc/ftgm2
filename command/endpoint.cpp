@@ -30,6 +30,7 @@ RetValue	ShellCommandEndpoint
 		}
 		else if (IsCorrectOption(_arguments[1],"create"))
 		{
+#if 0
 			Endpoint::Type	type = Endpoint::StringToType(_arguments[2]);
 			if (type == Endpoint::TYPE_UNKNOWN)
 			{
@@ -120,6 +121,7 @@ RetValue	ShellCommandEndpoint
 					delete properties;
 				}
 			}
+#endif
 		}
 		else if (IsCorrectOption(_arguments[1], "delete"))
 		{
@@ -134,6 +136,7 @@ RetValue	ShellCommandEndpoint
 				}
 				else
 				{
+#if 0
 					ret_value = object_manager->Disconnect(endpoint);
 					if (ret_value == RET_VALUE_OK)
 					{
@@ -144,6 +147,7 @@ RetValue	ShellCommandEndpoint
 					{
 						_shell->Out() << "Failed to detach the endpoint[" << _arguments[index] << "]." << endl;
 					}
+#endif
 				}
 			}
 		}
@@ -157,6 +161,7 @@ RetValue	ShellCommandEndpoint
 			{
 				if (IsCorrectOption(_arguments[2], "all"))
 				{
+#if 0
 					for(uint32 i = 0 ; i < object_manager->EndpointCount() ; i++)
 					{
 						Endpoint*	endpoint = object_manager->GetEndpoint(i);
@@ -178,6 +183,7 @@ RetValue	ShellCommandEndpoint
 						}
 					
 					}
+#endif
 				}
 			}
 		}

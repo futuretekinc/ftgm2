@@ -178,24 +178,53 @@ RetValue Device::Properties::Set
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	if (_node.type() == JSON_NODE)
+	if (strcasecmp(_node.name().c_str(), "type") == 0)
 	{
-		for(size_t i = 0 ; i < _node.size() ; i++)
+
+	}
+	else if (strcasecmp(_node.name().c_str(), "name") == 0)
+	{
+		if (_node.type() == JSON_STRING)
 		{
-			ret_value = Set(_node[i]);
-			if (ret_value != RET_VALUE_OK)
-			{
-				break;	
-			}
+			name = _node.as_string();
+		}
+		else
+		{
+			ret_value = RET_VALUE_INVALID_FIELD;
+			ERROR(NULL, ret_value, "Failed to set enable!");
 		}
 	}
-	else if (_node.type() != JSON_NULL)
+	else if (strcasecmp(_node.name().c_str(), "id") == 0)
 	{
-		if (strcasecmp(_node.name().c_str(), "name") == 0)
+		if (_node.type() == JSON_STRING)
 		{
-			if (_node.type() == JSON_STRING)
+			id = _node.as_string();
+		}
+		else
+		{
+			ret_value = RET_VALUE_INVALID_FIELD;
+			ERROR(NULL, ret_value, "Failed to set enable!");
+		}
+	}
+	else if (strcasecmp(_node.name().c_str(), "enable") == 0)
+	{
+		if (_node.type() == JSON_NUMBER)
+		{
+			enable = (_node.as_int() != 0);
+		}
+		else if (_node.type() == JSON_STRING)
+		{
+			if ((strcasecmp(_node.as_string().c_str(), "true") == 0) || 
+					(strcasecmp(_node.as_string().c_str(), "on") == 0) || 
+					(strcasecmp(_node.as_string().c_str(), "1") == 0))
 			{
-				name = _node.as_string();
+				enable = true;	
+			}
+			else if ((strcasecmp(_node.as_string().c_str(), "false") == 0) || 
+					(strcasecmp(_node.as_string().c_str(), "off") == 0) || 
+					(strcasecmp(_node.as_string().c_str(), "0") == 0))
+			{
+				enable = false;
 			}
 			else
 			{
@@ -203,63 +232,32 @@ RetValue Device::Properties::Set
 				ERROR(NULL, ret_value, "Failed to set enable!");
 			}
 		}
-		else if (strcasecmp(_node.name().c_str(), "id") == 0)
+		else
 		{
-			if (_node.type() == JSON_STRING)
-			{
-				id = _node.as_string();
-			}
-			else
-			{
-				ret_value = RET_VALUE_INVALID_FIELD;
-				ERROR(NULL, ret_value, "Failed to set enable!");
-			}
+			ret_value = RET_VALUE_INVALID_FIELD;
+			ERROR(NULL, ret_value, "Failed to set enable!");
 		}
-		else if (strcasecmp(_node.name().c_str(), "enable") == 0)
-		{
-			if (_node.type() == JSON_NUMBER)
-			{
-				enable = (_node.as_int() != 0);
-			}
-			else if (_node.type() == JSON_STRING)
-			{
-				if ((strcasecmp(_node.as_string().c_str(), "true") == 0) || 
-						(strcasecmp(_node.as_string().c_str(), "on") == 0) || 
-						(strcasecmp(_node.as_string().c_str(), "1") == 0))
-				{
-					enable = true;	
-				}
-				else if ((strcasecmp(_node.as_string().c_str(), "false") == 0) || 
-						(strcasecmp(_node.as_string().c_str(), "off") == 0) || 
-						(strcasecmp(_node.as_string().c_str(), "0") == 0))
-				{
-					enable = false;
-				}
-				else
-				{
-					ret_value = RET_VALUE_INVALID_FIELD;
-					ERROR(NULL, ret_value, "Failed to set enable!");
-				}
-			}
-			else
-			{
-				ret_value = RET_VALUE_INVALID_FIELD;
-				ERROR(NULL, ret_value, "Failed to set enable!");
-			}
 
-		}
-		else if (strcasecmp(_node.name().c_str(), "endpoints") == 0)
+	}
+	else if (strcasecmp(_node.name().c_str(), "endpoints") == 0)
+	{
+		AddEndpoints(_node);	
+	}
+	else if (strcasecmp(_node.name().c_str(), "endpoint") == 0)
+	{
+		AddEndpoint(_node);	
+	}
+	else if(_node.type() == JSON_NODE)
+	{
+		for(int i = 0 ; i < (int)_node.size() ; i++)
 		{
-			AddEndpoints(_node);	
-		}
-		else if (strcasecmp(_node.name().c_str(), "endpoint") == 0)
-		{
-			AddEndpoint(_node);	
+			Set(_node[i]);	
 		}
 	}
 	else
 	{
 		ret_value = RET_VALUE_INVALID_FIELD;
+		ERROR(NULL, ret_value, "Failed to set device properties[%s]!", _node.name().c_str());
 	}
 
 	return	ret_value;
@@ -276,7 +274,11 @@ RetValue	Device::Properties::AddEndpoints
 	{
 		for(int i = 0 ; i < (int)_node.size() ; i++)
 		{
-			AddEndpoint(_node[i]);	
+			ret_value = AddEndpoint(_node[i]);	
+			if (ret_value != RET_VALUE_OK)
+			{
+				break;
+			}
 		}
 	}
 	else
@@ -292,11 +294,20 @@ RetValue	Device::Properties::AddEndpoint
 	const	JSONNode&	_node
 )
 {
+	RetValue ret_value = RET_VALUE_OK;
+
 	Endpoint::Properties*	endpoint_properties = Endpoint::Properties::Create(_node);
 
-	endpoint_list.push_back(endpoint_properties);
+	if (endpoint_properties != NULL)
+	{
+		endpoint_list.push_back(endpoint_properties);
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_FIELD;		
+	}
 
-	return	RET_VALUE_OK;
+	return	ret_value;
 }
 
 void	Device::Properties::Show()
@@ -365,6 +376,7 @@ Device::Device
 		{
 			RetValue	ret_value;
 
+			TRACE(this, "Connect(%x)", endpoint);
 			ret_value = Connect(endpoint);	
 			if (ret_value != RET_VALUE_OK)
 			{
@@ -433,16 +445,13 @@ Device::~Device()
 	{
 		Endpoint*	endpoint = it->second;
 	
-		endpoint->ReleaseDevice();
+		endpoint_list_.erase(it);
+
 		delete endpoint;
 
 		it++;
 	}
 
-	if (object_manager_ != NULL)
-	{
-		object_manager_->Disconnect(this);	
-	}
 	TRACE(this, "Device[%s] destroy.", properties_.id.c_str());
 }
 
@@ -477,21 +486,10 @@ void	Device::SetName
 	properties_.name = _name;	
 }
 
-RetValue	Device::SetObjectManager
-(
-	ObjectManager* _object_manager
-)
+const 
+std::string&	Device::GetID()
 {
-	object_manager_ = _object_manager;
-
-	return	RET_VALUE_OK;
-}
-
-RetValue	Device::ReleaseObjectManager()
-{
-	object_manager_ = NULL;
-
-	return	RET_VALUE_OK;
+	return	properties_.id;
 }
 
 Endpoint*	Device::CreateEndpoint
@@ -603,23 +601,15 @@ RetValue	Device::Connect
 	Endpoint *_ep
 )
 {
-	RetValue	ret_value;
+	RetValue	ret_value = RET_VALUE_OK;
 
+	cout << _ep << " is connected to " << GetID() << endl;
 	map<const string, Endpoint *>::iterator it = endpoint_list_.find(_ep->GetID());
-
-	if (it != endpoint_list_.end())
-	{
-		ret_value = RET_VALUE_OK;
-	}
-	else
+	if (it == endpoint_list_.end())
 	{
 		endpoint_list_[_ep->GetID()] = _ep;
 
-		ret_value = _ep->SetDevice(this);
-		if (ret_value != RET_VALUE_OK)
-		{
-			ERROR(this, ret_value, "The endpoint[%s] is failed to attach at device[%s]", _ep->GetID().c_str(), properties_.id.c_str());	
-		}
+		_ep->SetParent(this);
 	}
 
 	return	ret_value;
@@ -636,8 +626,11 @@ RetValue	Device::Disconnect
 	{
 		for(map<const string, Endpoint *>::iterator it = endpoint_list_.begin(); it != endpoint_list_.end() ; it++)
 		{
-			it->second->ReleaseDevice();
+			Endpoint *endpoint = it->second;
+			
 			endpoint_list_.erase(it);
+
+			endpoint->ReleaseParent();
 		}
 	}
 	else
@@ -647,11 +640,7 @@ RetValue	Device::Disconnect
 		{
 			endpoint_list_.erase(it);
 
-			ret_value = _ep->ReleaseDevice();
-			if (ret_value != RET_VALUE_OK)
-			{
-				ERROR(this, ret_value, "The endpoint[%s] can not be detached.", _ep->GetID().c_str());
-			}
+			_ep->ReleaseParent();
 		}
 	}
 
@@ -716,6 +705,11 @@ void	Device::PostProcess()
 {
 	if (schedule_thread_ != NULL)
 	{
+		schedule_stop_ = true;
+
+		
+		schedule_thread_->join();
+
 		delete schedule_thread_;
 		schedule_thread_ = NULL;
 	}
@@ -1034,6 +1028,7 @@ void Device::DeviceScheduleProcess
 
 	TRACE(_device, "The device[%s] Scheduler stopped!", _device->GetID().c_str());
 }
+
 ///////////////////////////////////////////////////////
 // Global functions
 ///////////////////////////////////////////////////////

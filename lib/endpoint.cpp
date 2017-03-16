@@ -265,9 +265,7 @@ Endpoint::Endpoint
 )
 :	properties_(_type, 0)
 {
-	device_= NULL;
 	activation_ = false;
-	object_manager_ = NULL;
 
 	TRACE(this, "The endpoint[%s] was created.", properties_.id.c_str());
 }
@@ -278,9 +276,7 @@ Endpoint::Endpoint
 )
 :	properties_(_properties)
 {
-	device_	= NULL;
 	activation_		= false;
-	object_manager_ = NULL;
 
 	TRACE(this, "The endpoint[%s] was created.", properties_.id.c_str());
 }
@@ -291,11 +287,9 @@ Endpoint::Endpoint
 )
 :	properties_(*_properties)
 {
-	device_	= NULL;
 	activation_		= false;
-	object_manager_ = NULL;
 
-	TRACE(this, "The endpoint[%s] was created.", properties_.id.c_str());
+	TRACE(this, "The endpoint(%x)[%s] was created.", this, properties_.id.c_str());
 }
 
 Endpoint::Endpoint
@@ -308,19 +302,62 @@ Endpoint::Endpoint
 	properties_.id 	= _id;
 	properties_.name= _id;
 
-	device_		= NULL;
 	activation_	= false;
-	object_manager_ = NULL;
 
 	TRACE(this, "The endpoint[%s] was created.", properties_.id.c_str());
 }
 
 Endpoint::~Endpoint()
 {
-	if (device_ != NULL)
+	if (parent_ != NULL)
 	{
-		device_->Disconnect(this);
+		((Device *)parent_)->Disconnect(this);
 	}
+}
+
+Endpoint::Type	Endpoint::GetType()
+{
+	return	properties_.type;	
+}
+
+uint32_t		Endpoint::GetIndex()
+{
+	return	properties_.index;	
+}
+
+const
+std::string&	Endpoint::SetName
+(
+	const std::string& _name
+)	
+{	
+	return	properties_.name = _name; 
+}
+
+bool		Endpoint::IsEnabled()
+{	
+	return	properties_.enable;	
+}
+
+uint32		Endpoint::UpdateInterval()	
+{	
+	return	properties_.update_interval;
+}
+
+bool		Endpoint::IsActivated()
+{
+	return	activation_;	
+}
+
+uint32_t	Endpoint::MaxValueCount()
+{	
+	return	properties_.value_count;	
+}
+
+const
+std::string&	Endpoint::GetID()
+{
+	return	properties_.id;
 }
 
 void	Endpoint::UpdateInterval
@@ -340,9 +377,11 @@ RetValue	Endpoint::SetEnable
 	{
 		properties_.enable = _enable;
 
-		if (device_ != NULL)
+		Device *device = (Device *)parent_;
+
+		if (device != NULL)
 		{
-			if (device_->IsRun())
+			if (device->IsRun())
 			{
 				if (properties_.enable == true)
 				{
@@ -352,6 +391,10 @@ RetValue	Endpoint::SetEnable
 				{
 					Deactivation();
 				}
+			}
+			else 
+			{
+				Deactivation();
 			}
 		}
 	}	
@@ -368,11 +411,13 @@ RetValue	Endpoint::Activation()
 		if (!activation_)
 		{
 			if (properties_.enable)
-				activation_ = true;
-
-			if (device_ != NULL)
 			{
-				ret_value = device_->Activation(this);
+				activation_ = true;
+			}
+
+			if (parent_ != NULL)
+			{
+				ret_value = ((Device *)parent_)->Activation(this);
 			}
 			else
 			{
@@ -393,9 +438,9 @@ RetValue	Endpoint::Deactivation()
 	if (activation_)
 	{
 		activation_ = false;
-		if (device_ != NULL)
+		if (parent_ != NULL)
 		{
-			device_->Deactivation(this);
+			((Device *)parent_)->Deactivation(this);
 		}
 		else
 		{
@@ -407,57 +452,6 @@ RetValue	Endpoint::Deactivation()
 
 	return	ret_value;
 }
-
-RetValue	Endpoint::SetObjectManager
-(
-	ObjectManager* _object_manager
-)
-{
-	if (object_manager_ != NULL)
-	{
-		return	RET_VALUE_ALREADY_ATTACHED;
-	}
-
-	object_manager_ = _object_manager;
-
-	return	RET_VALUE_OK;
-}
-
-RetValue	Endpoint::ReleaseObjectManager()
-{
-	object_manager_	= NULL;
-
-	return	RET_VALUE_OK;
-}
-
-RetValue	Endpoint::SetDevice
-(
-	Device *_device
-)
-{
-	RetValue	ret_value = RET_VALUE_OK;
-
-	if (device_ != NULL)
-	{
-		ret_value = RET_VALUE_ALREADY_ATTACHED;
-		ERROR(this, ret_value, "The endpoint[%s] is already attached at  device[%s]", properties_.id.c_str(), _device->GetID().c_str());	
-	}
-	else
-	{
-		TRACE(this, "The endpoint[%s] is attached at device[%s]", properties_.id.c_str(), _device->GetID().c_str());
-		device_ = _device;
-	}
-
-	return	ret_value;
-}
-
-RetValue	Endpoint::ReleaseDevice()
-{
-	device_ = NULL;
-
-	return	RET_VALUE_OK;
-}
-
 
 RetValue	Endpoint::Synchronize()
 {
@@ -665,7 +659,20 @@ RetValue	Endpoint::SetProperties
 	return	ret_value;
 }
 
+void	Endpoint::ReleaseParent()
+{
+	if (parent_ != NULL)
+	{
+		Device*	device = (Device *)parent_;
+		parent_ = NULL;
 
+		device->Disconnect(this);	
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Global function
+//////////////////////////////////////////////////////////////////////////
 Endpoint* 	Endpoint::Create
 (
 	Endpoint::Type _type
@@ -698,9 +705,6 @@ Endpoint* 	Endpoint::Create
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////
-// Global function
-//////////////////////////////////////////////////////////////////////////
 ostream& operator<<
 (
 	ostream& _os, 

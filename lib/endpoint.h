@@ -72,29 +72,29 @@ public:
 	static
 	Endpoint*		Create(const Properties* properties);
 
-	Type			GetType()	{	return	properties_.type;	};
-	uint32_t		GetIndex()	{	return	properties_.index;	};
+	Type			GetType();
+	uint32_t		GetIndex();
 	const
-	std::string		GetID()		{	return	properties_.id;	};
+	std::string&	GetID();
 	const 
-	std::string		GetName()	{	return	properties_.name;	};
+	std::string&	GetName();
 	const
-	std::string		SetName(const std::string& _name)	{	return	properties_.name = _name; }
+	std::string&	SetName(const std::string& _name);
 
-	bool			IsEnabled()	{	return	properties_.enable;	}
+	bool			IsEnabled();
 	RetValue		SetEnable(bool _enable);
 
-	uint32			UpdateInterval()	{	return	properties_.update_interval;	}
+	uint32			UpdateInterval();
 	void			UpdateInterval(uint32_t	_interval);
 	
 	RetValue		Activation();
 	RetValue		Deactivation();
-	bool			IsActivated()	{	return	activation_;	};
+	bool			IsActivated();
 
 	virtual
 	RetValue		Synchronize();
 
-	uint32_t		MaxValueCount()	{	return	properties_.value_count;	}
+	uint32_t		MaxValueCount()	;
 	void			MaxValueCount(uint32_t _count);
 
 	uint32_t		ValueCount();
@@ -118,18 +118,10 @@ public:
 	std::ostream& 	operator<<(std::ostream& _os, const Endpoint& _ep);
 
 protected:
-	RetValue		SetObjectManager(ObjectManager* _object_manager);
-	ObjectManager*	GetObjectManager()	{	return	object_manager_;	}
-	RetValue		ReleaseObjectManager();
-
-	RetValue		SetDevice(Device *_device);
-	Device*			GetDevice()		{	return	device_;	}
-	RetValue		ReleaseDevice();
+	void			ReleaseParent();
 
 	Properties		properties_;
 
-	ObjectManager*	object_manager_;
-	Device*			device_;
 	bool			activation_;
 
 	std::list<TimedValue>	value_list_;
