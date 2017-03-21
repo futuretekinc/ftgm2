@@ -12,30 +12,40 @@
 #include "message_queue.h"
 #include "message_process.h"
 
-class	DataManager;
-class	Device;
-class	Endpoint;
 class	JSONNode;
+class	DataManager;
 
 class	ObjectManager : public MessageProcess
 {
+	friend	class	DataManager;
+	friend	class	Device;
+	friend 	class	Endpoint;
 public:
 	ObjectManager();
 	~ObjectManager();
 
-	const 
-	std::string&	ClassName();
+	RetValue	Destroy(const std::string& _device_id);
 
-	RetValue	Connect(Device *_device);
-	RetValue	Disconnect(Device *_device);
+	RetValue	CreateDevice(Device::Properties *_properties);
+	RetValue	DestroyDevice(const std::string& _id);
+
 	uint32		GetDeviceCount();
 	Device*		GetDevice(uint32 _index);
 	Device*		GetDevice(const std::string& _id);
+	RetValue	SetDeviceName(const std::string& _id, const std::string& _name);
+	RetValue	SetDeviceEnable(const std::string& _id, bool _enable);
+	RetValue	SetDeviceActivation(const std::string& _id, bool _activation);
 	void		ShowDeviceList();
+
+	RetValue	CreateEndpoint(Endpoint::Properties *_properties);
+	RetValue	DestroyEndpoint(const std::string& _id);
 
 	uint32		GetEndpointCount();
 	Endpoint*	GetEndpoint(uint32 _index);
 	Endpoint*	GetEndpoint(const std::string& _id);
+	RetValue	SetEndpointName(const std::string& _id, const std::string& _name);
+	RetValue	SetEndpointEnable(const std::string& _id, bool _enable);
+	RetValue	SetEndpointActivation(const std::string& _id, bool _activation);
 	void		ShowEndpointList();
 
 	RetValue	Connect(DataManager* _data_manager);
@@ -43,6 +53,7 @@ public:
 	DataManager* GetDataManager();
 
 	RetValue	Load(std::string _file_name);
+	RetValue	LoadFromDataManager();
 
 	void		OnMessage(Message* _message);
 	void		OnQuit(Message* _message);
@@ -54,9 +65,18 @@ protected:
 	void		PreProcess();
 	void		PostProcess();
 
+	RetValue	Connect(Device *_device);
+	RetValue	Disconnect(Device *_device);
 	RetValue	LoadDevice(const JSONNode& _json_node);
+	RetValue	SaveDevice(Device* _device);
+
+	RetValue	Connect(Endpoint *_endpoint);
+	RetValue	Disconnect(Endpoint *_endpoint);
+	RetValue	LoadEndpoint(const JSONNode& _json_node);
+	RetValue	SaveEndpoint(Endpoint* _endpoint);
 
 	std::map<const std::string, Device *>		device_map_;
+	std::map<const std::string, Endpoint *>		endpoint_map_;
 	DataManager*								data_manager_;
 };
 

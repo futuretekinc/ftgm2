@@ -9,14 +9,9 @@ SNMPObject::OID	fte_oid_temperature;
 static	uint32_t	_OID_map_reference_count = 0;	
 static map<string, SNMPObject *>	_OID_map;
 
-DeviceFTE::Properties::Properties
-(
-	const JSONNode& _node
-)
-:	DeviceSNMP::Properties(_node)
+DeviceFTE::Properties::Properties()
+: DeviceSNMP::Properties(TYPE_FTE)
 {
-	TRACE(NULL, "The DeviceFTE properties created.");
-	type	=	TYPE_FTE;
 	if (_OID_map_reference_count == 0)
 	{
 		_OID_map_reference_count++;
@@ -46,25 +41,6 @@ DeviceFTE::~DeviceFTE()
 	}
 }
 
-DeviceFTE::DeviceFTE
-(
-	const Properties& _properties
-)
-: DeviceSNMP(_properties)
-{
-	properties_.type	= TYPE_FTE;
-}
-
-DeviceFTE::DeviceFTE
-(
-	const Properties* _properties
-)
-: DeviceSNMP(_properties)
-{
-	TRACE(this, "Device FTE created!");
-	properties_.type	= TYPE_FTE;
-}
-
 RetValue	DeviceFTE::SetProperties
 (
 	const	JSONNode&	node
@@ -91,19 +67,14 @@ RetValue	DeviceFTE::SetProperties
 	return	retval;
 }
 
-RetValue	DeviceFTE::GetValue
+RetValue	DeviceFTE::GetEndpointValue
 (
 	Endpoint* _endpoint
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	if (!snmp_session_.IsOpened())
-	{
-		ret_value = RET_VALUE_SNMP_SESSION_IS_NOT_CONNECTED;
-		ERROR(this, ret_value, "SNMP session is not connected.");
-	}
-	else
+	if (snmp_session_.IsOpened())
 	{
 		SNMPObject*	snmp_object = GetValueObject(_endpoint->GetType(), _endpoint->GetIndex());
 
@@ -125,11 +96,16 @@ RetValue	DeviceFTE::GetValue
 			}
 		}
 	}
+	else
+	{
+		ret_value = RET_VALUE_SNMP_SESSION_IS_NOT_CONNECTED;
+		ERROR(this, ret_value, "SNMP session is not connected.");
+	}
 
 	return ret_value;
 }
 
-RetValue	DeviceFTE::SetValue
+RetValue	DeviceFTE::SetEndpointValue
 (
 	Endpoint* _endpoint
 )
@@ -159,12 +135,12 @@ SNMPObject*	DeviceFTE::GetValueObject
 
 		switch(_type)
 		{
-		case	Endpoint::Type::TYPE_SENSOR_TEMPERATURE:  	fte_oid_base_value.id[9] = 1 << 8;	break;
-		case	Endpoint::Type::TYPE_SENSOR_HUMIDITY:  		fte_oid_base_value.id[9] = 2 << 8;	break;
-		case	Endpoint::Type::TYPE_SENSOR_VOLTAGE:  		fte_oid_base_value.id[9] = 3 << 8;	break;
-		case	Endpoint::Type::TYPE_SENSOR_CURRENT:  		fte_oid_base_value.id[9] = 4 << 8;	break;
-		case	Endpoint::Type::TYPE_SENSOR_DIGITAL_INPUT:	fte_oid_base_value.id[9] = 5 << 8;	break;
-		case	Endpoint::Type::TYPE_CONTROL_DIGITAL_OUTPUT:fte_oid_base_value.id[9] = 6 << 8;	break;
+		case	Endpoint::Type::TEMPERATURE_SENSOR:	fte_oid_base_value.id[9] = 1 << 8;	break;
+		case	Endpoint::Type::HUMIDITY_SENSOR:  	fte_oid_base_value.id[9] = 2 << 8;	break;
+		case	Endpoint::Type::VOLTAGE_SENSOR:  	fte_oid_base_value.id[9] = 3 << 8;	break;
+		case	Endpoint::Type::CURRENT_SENSOR:  	fte_oid_base_value.id[9] = 4 << 8;	break;
+		case	Endpoint::Type::DI_SENSOR:			fte_oid_base_value.id[9] = 5 << 8;	break;
+		case	Endpoint::Type::DO_CONTROL:			fte_oid_base_value.id[9] = 6 << 8;	break;
 		default: return	NULL;	
 		}
 

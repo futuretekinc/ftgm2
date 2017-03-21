@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <unistd.h>
 #include "timer.h"
 
 using namespace std;
@@ -133,8 +134,22 @@ bool	TimeoutTimer::IsExpired()
 	
 	gettimeofday(&current_time_, NULL);
 
-	return	((time_.tv_sec < current_time_.tv_sec) || ((time_.tv_sec < current_time_.tv_sec) && (time_.tv_usec < current_time_.tv_usec)));
+	return	((time_.tv_sec < current_time_.tv_sec) || ((time_.tv_sec == current_time_.tv_sec) && (time_.tv_usec < current_time_.tv_usec)));
 }
+
+uint64_t	TimeoutTimer::WaitingForExpired()
+{
+	uint64_t	remain_time;
+	
+	remain_time = RemainTime();
+	if (remain_time != 0)
+	{
+		usleep(remain_time * 1000);	
+	}
+
+	return	remain_time;
+}
+
 void	TimeoutTimer::Add
 (
 	uint64_t _milliseconds
@@ -158,3 +173,34 @@ string	TimeoutTimer::ToString()
 	return	string(buffer);
 }
 
+LoopTimer::LoopTimer
+(
+	uint32_t _interval
+)
+:	TimeoutTimer(), interval_(_interval)
+{
+}
+
+LoopTimer::LoopTimer
+(
+	const Time& _time, 
+	uint32_t _interval
+)
+:	TimeoutTimer(_time), interval_(_interval)
+{
+}
+
+void	LoopTimer::Start()
+{
+	gettimeofday(&time_, NULL);
+	Add(interval_);
+}
+
+uint64_t	LoopTimer::WaitingForExpired()
+{
+	TimeoutTimer::WaitingForExpired();
+
+	Add(interval_);
+
+	return	RemainTime();
+}

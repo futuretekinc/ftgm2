@@ -1,12 +1,12 @@
-#ifndef	MUTEX_H_
-#define	MUTEX_H_
+#ifndef	LOCKER_H_
+#define	LOCKER_H_
 
 #include <mutex>
 
-class	Mutex
+class	Locker
 {
 public:
-			Mutex();
+			Locker();
 
 	bool	Lock();
 	bool	Unlock();

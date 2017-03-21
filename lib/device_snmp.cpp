@@ -2,6 +2,8 @@
 #include "device_snmp.h"
 #include "trace.h"
 #include "snmp_client.h"
+#include "KompexSQLiteStatement.h"
+#include "KompexSQLiteException.h"
 
 using namespace std;
 
@@ -11,9 +13,38 @@ DeviceSNMP::Properties::Properties
 ) 
 : Device::Properties(_node)
 {
-	TRACE(NULL, "The DeviceSNMP properties created.");
+	INFO(NULL, "The DeviceSNMP properties created." );
 
 	type = TYPE_SNMP;
+}
+
+RetValue DeviceSNMP::Properties::Set
+(
+	Kompex::SQLiteStatement*	_statement
+)
+{
+	RetValue ret_value;
+	
+	ret_value = Device::Properties::Set(_statement);
+	if (ret_value == RET_VALUE_OK)
+	{
+		try
+		{
+			Options* options = (Options *)_statement->GetColumnBlob("_options");
+			if (options != NULL)
+			{
+				peer = options->peer;
+				community = options->community;
+			}
+		}
+		catch(Kompex::SQLiteException& exception)
+		{
+			ret_value = RET_VALUE_DB_ENTRY_DOES_NOT_EXIST;
+			ERROR(NULL, ret_value, "Failed to set properties!");
+		}
+	}
+
+	return	ret_value;
 }
 
 RetValue DeviceSNMP::Properties::Set
@@ -25,11 +56,29 @@ RetValue DeviceSNMP::Properties::Set
 
 	if (strcasecmp(_node.name().c_str(), "peer") == 0)
 	{
-		ret_value = SetPeer(_node);
+		if ((_node.type() != JSON_STRING) && (_node.type() != JSON_NULL))
+		{
+			ret_value = RET_VALUE_INVALID_FIELD;
+			ERROR(NULL, ret_value, "Failed to set field[%s].", _node.name().c_str());
+		}
+		else
+		{
+			peer = _node.as_string();
+		}
+
 	}
 	else if (strcasecmp(_node.name().c_str(), "community") == 0)
 	{
-		ret_value = SetCommunity(_node);
+		if ((_node.type() != JSON_STRING) && (_node.type() != JSON_NULL))
+		{
+			ret_value = RET_VALUE_INVALID_FIELD;
+			ERROR(NULL, ret_value, "Failed to set field[%s].", _node.name().c_str());
+		}
+		else
+		{
+			community = _node.as_string();
+		}
+
 	}
 	else 
 	{
@@ -39,90 +88,136 @@ RetValue DeviceSNMP::Properties::Set
 	return	ret_value;
 }
 
-RetValue DeviceSNMP::Properties::SetPeer
+uint32	DeviceSNMP::Properties::GetOptionsSize()
+{
+	return	sizeof(Options);
+}
+
+uint32	DeviceSNMP::Properties::GetOptions
 (
-	const JSONNode& _node
+	uint8_t *_options, 
+	uint32 _options_len
 )
 {
-	RetValue	ret_value = RET_VALUE_OK;
+	if (_options_len > sizeof(Options))
+	{
+		peer.copy(((Options*)_options)->peer, sizeof(((Options*)_options)->peer) - 1); 
+		community.copy(((Options*)_options)->community, sizeof(((Options*)_options)->community) - 1); 
 
-	if ((_node.type() != JSON_STRING) && (_node.type() != JSON_NULL))
-	{
-		ret_value = RET_VALUE_INVALID_FIELD;
-		ERROR(NULL, ret_value, "Failed to set field[%s].", _node.name().c_str());
-	}
-	else
-	{
-		peer = _node.as_string();
+		return	sizeof(Options);
 	}
 
-	return	ret_value;
+	return	0;
 }
-
-RetValue DeviceSNMP::Properties::SetCommunity
-(
-	const JSONNode& _node
-)
-{
-	RetValue	ret_value = RET_VALUE_OK;
-
-	if ((_node.type() != JSON_STRING) && (_node.type() != JSON_NULL))
-	{
-		ret_value = RET_VALUE_INVALID_FIELD;
-		ERROR(NULL, ret_value, "Failed to set field[%s].", _node.name().c_str());
-	}
-	else
-	{
-		community = _node.as_string();
-	}
-
-	return	ret_value;
-}
-
-void DeviceSNMP::Properties::Show()
-{
-	Device::Properties::Show();
-
-	cout << setw(16) << "Peer : " << peer << endl;
-	cout << setw(16) << "Community : " << community << endl;
-}
-
 
 ///////////////////////////////////////////////////////
 // Device for SNMP
 ///////////////////////////////////////////////////////
 
-DeviceSNMP::DeviceSNMP()
-:	Device()
+DeviceSNMP::DeviceSNMP
+(
+	Type _type
+)
+:	Device(_type)
 {
-	properties_.type	= TYPE_SNMP;
 	peer_ 		= "127.0.0.1";
 	community_ 	= "public";
-}
-
-DeviceSNMP::DeviceSNMP
-(
-	const Properties& _properties
-)
-: Device(_properties)
-{
-	peer_ 		= _properties.peer;
-	community_ 	= _properties.community;
-}
-
-DeviceSNMP::DeviceSNMP
-(
-	const Properties* _properties
-)
-: Device(_properties)
-{
-	peer_ 		= _properties->peer;
-	community_ 	= _properties->community;
 }
 
 DeviceSNMP::~DeviceSNMP()
 {
 	snmp_session_.Close();
+}
+
+const 
+std::string&	DeviceSNMP::GetPeer()
+{	
+	return	peer_;	
+}
+
+void	DeviceSNMP::SetPeer
+(
+	const std::string& _peer
+)	
+{	
+	peer_ = _peer;
+}
+
+const 
+std::string&	DeviceSNMP::GetCommunity()	
+{	
+	return	community_;	
+}
+
+void	DeviceSNMP::SetCommunity
+(
+	const std::string& _community
+)	
+{	
+	community_ = _community;
+}
+
+RetValue DeviceSNMP::SetProperties
+(
+	const Properties& _properties
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+	
+	ret_value = Device::SetProperties(_properties);
+	if (ret_value == RET_VALUE_OK)
+	{
+		peer_ 		= _properties.peer;
+		community_ 	= _properties.community;
+	}
+
+	return	ret_value;
+}
+
+RetValue DeviceSNMP::SetProperties
+(
+	const Properties* _properties
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+	
+	ret_value = Device::SetProperties(_properties);
+	if (ret_value == RET_VALUE_OK)
+	{
+		peer_ 		= _properties->peer;
+		community_ 	= _properties->community;
+	}
+
+	return	ret_value;
+}
+
+RetValue DeviceSNMP::SetProperties
+(
+	Kompex::SQLiteStatement*	_statement
+)
+{
+	RetValue ret_value;
+
+	ret_value = Device::SetProperties(_statement);
+	if (ret_value == RET_VALUE_OK)
+	{
+		try
+		{
+			Options* options = (Options *)_statement->GetColumnBlob("_options");
+			if (options != NULL)
+			{
+				peer_ = options->peer;
+				community_ = options->community;
+			}
+		}
+		catch(Kompex::SQLiteException& exception)
+		{
+			ret_value = RET_VALUE_DB_ENTRY_DOES_NOT_EXIST;
+			ERROR(NULL, ret_value, "Failed to set properties!");
+		}
+	}
+
+	return	ret_value;
 }
 
 RetValue	DeviceSNMP::SetProperties
@@ -179,7 +274,7 @@ RetValue	DeviceSNMP::SetProperties
 	return	ret_value;
 }
 
-RetValue	DeviceSNMP::GetValue
+RetValue	DeviceSNMP::GetEndpointValue
 (
 	Endpoint* endpoint
 )

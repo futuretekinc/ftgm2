@@ -8,6 +8,12 @@
 class	DeviceSNMP : public Device
 {
 public:
+	struct	Options
+	{
+		char			peer[SNMP_PEER_MAX_LEN + 1];
+		char			community[SNMP_COMMUNITY_MAX_LEN + 1];
+	};
+
 	struct	Properties : Device::Properties
 	{
 		std::string	peer;
@@ -17,30 +23,33 @@ public:
 					Properties(const JSONNode& _node);
 
 		RetValue 	Set(const JSONNode&	_node);
-		RetValue 	SetPeer(const JSONNode& _node);
-		RetValue 	SetCommunity(const JSONNode& _node);
+		RetValue	Set(Kompex::SQLiteStatement*	_statement);
 
-		virtual	
-		void		Show();
+		virtual
+		uint32		GetOptionsSize();
+		virtual
+		uint32		GetOptions(uint8_t *options, uint32 options_len);
 	};
 
 	// Constructor & Destructor
-					DeviceSNMP();
-					DeviceSNMP(const Properties& _properties);
-					DeviceSNMP(const Properties* _properties);
+					DeviceSNMP(Type _type);
 					~DeviceSNMP();
 
 	// Interface
 	const 
-	std::string&	Peer()		{	return	peer_;	}
-	void			Peer(const std::string& _peer)	{	peer_ = _peer;	}
+	std::string&	GetPeer();
+	void			SetPeer(const std::string& _peer);
+
 	const 
-	std::string&	Community()	{	return	community_;	}
-	void			Community(const std::string& _community)	{	community_ = _community;	}
+	std::string&	GetCommunity();
+	void			SetCommunity(const std::string& _community);
 
-	RetValue		SetProperties (const JSONNode&	_node);
+	RetValue		SetProperties(const Properties* _properties);
+	RetValue		SetProperties(const Properties& _properties);
+	RetValue 		SetProperties(Kompex::SQLiteStatement*	_statement);
+	RetValue		SetProperties(const JSONNode&	_node);
 
-	RetValue		GetValue(Endpoint* _endpoint);
+	RetValue		GetEndpointValue(Endpoint* _endpoint);
 protected:
 	std::string		peer_;
 	std::string		community_;

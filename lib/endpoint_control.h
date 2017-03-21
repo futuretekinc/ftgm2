@@ -6,18 +6,23 @@
 class	EndpointControl : public Endpoint
 {
 public:
-	struct	Properties : Endpoint::Properties
+	struct	Options
+	{
+		double	max_value;
+		double	min_value;
+	};
+	
+	struct Properties : Endpoint::Properties
 	{
 		Properties(const Properties& _properties);
 		Properties(const Properties* _properties);
-		Properties(Type _type = TYPE_CONTROL) : Endpoint::Properties(_type) {};
+		Properties(Type _type = UNKNOWN) : Endpoint::Properties(_type) {};
 		Properties(const JSONNode& _node);
 
 		virtual
 		Properties*	Duplicate();
 
-		double	max_value;
-		double	min_value;
+		Options	options;
 	};
 
 	EndpointControl(Type _type);

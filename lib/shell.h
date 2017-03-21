@@ -16,7 +16,7 @@ template <typename T>
 class	Shell
 {
 public:
-	Shell(ShellCommand<T>* _commands, int 	_command_count, T* _data)
+	Shell(ShellCommand<T>* _commands[], int 	_command_count, T* _data)
 	{
 		out_	= &std::cout;
 		data_ 	= _data;
@@ -24,20 +24,20 @@ public:
 		stop_ 	= true;
 		sync_   = false;
 		prompt_	= "shell";
-		max_command_witdh_ = 8;
+		max_command_width_ = 8;
 
 		for(int i = 0 ; i < _command_count ; i++)
 		{
-			typename std::map<const std::string, ShellCommand<T> *>::iterator it = command_map_.find(_commands[i].command);
+			typename std::map<const std::string, ShellCommand<T> *>::iterator it = command_map_.find(_commands[i]->name);
 			if (it == command_map_.end())
 			{
-				TRACE(NULL, "Add command[%s]", _commands[i].command.c_str());
-				command_map_[_commands[i].command] = &_commands[i];	
+				INFO(NULL, "Add command[%s].", _commands[i]->name.c_str());
+				command_map_[_commands[i]->name] = _commands[i];	
 
 			}
 			else
 			{
-				TRACE(NULL, "Already exist command[%s]", _commands[i].command.c_str());
+				INFO(NULL, "Already exist command[%s].", _commands[i]->name.c_str());
 			}
 		}
 	}
@@ -87,7 +87,7 @@ public:
 	}
 
 
-	void	Add(ShellCommand<T>* _commands, int 	_command_count)
+	void	Add(ShellCommand<T>* _commands[], int 	_command_count)
 	{
 		thread_ = NULL;
 		stop_ 	= true;
@@ -97,12 +97,12 @@ public:
 			typename std::map<const std::string, ShellCommand<T> *>::iterator it = command_map_.find(_commands[i].command);
 			if (it == command_map_.end())
 			{
-				TRACE(NULL, "Add command[%s]", _commands[i].command.c_str());
-				command_map_[_commands[i].command] = &_commands[i];	
+				INFO(NULL, "Add command[%s].", _commands[i]->command.c_str());
+				command_map_[_commands[i].command] = _commands[i];	
 			}
 			else
 			{
-				TRACE(NULL, "Already exist command[%s]", _commands[i].command.c_str());
+				INFO(NULL, "Already exist command[%s].", _commands[i]->command.c_str());
 			}
 		}
 	}
@@ -130,6 +130,19 @@ public:
 		return	NULL;
 	}
 
+	ShellCommand<T>*	GetCommand(const std::string& name_)
+	{
+		typename std::map<const std::string, ShellCommand<T>*>::iterator it = command_map_.find(name_);
+		if (it != command_map_.end()) 
+		{
+			return	it->second;
+		}
+
+		return	NULL;
+	}
+
+	uint32	GetCommandWidth()	{	return	max_command_width_;	}
+
 protected:
 	T*				data_;
 	std::thread*	thread_;
@@ -138,7 +151,7 @@ protected:
 	std::string		prompt_;
 	std::map<const std::string, ShellCommand<T>*>	command_map_;
 	std::ostream	*out_;
-	uint32			max_command_witdh_;
+	uint32			max_command_width_;
 
 	static
 	int		Parser

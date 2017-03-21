@@ -33,27 +33,18 @@ RetValue	ShellCommandDatabase
 			{
 				uint32_t	count = 0;
 
-				ret_value = data_manager->GetDeviceCount(count);
-				if (ret_value != RET_VALUE_OK)
-				{
-					_shell->Out() << "Failed to get device count!" << endl;	
-				}
-				else
-				{
-					Device::PropertiesList	_list;
+				count = data_manager->GetDeviceCount();
+				Device::PropertiesList	_list;
 
-					_shell->Out() << "Device Count : " << _count << endl;
+				_shell->Out() << "Device Count : " << _count << endl;
 
-					ret_value = data_manager->GetDeviceProperties(0, _count, _list);
-					if (ret_value == RET_VALUE_OK)
+				ret_value = data_manager->GetDeviceProperties(0, _count, _list);
+				if (ret_value == RET_VALUE_OK)
+				{
+					list<Device::Properties*>::iterator	it = _list.begin();
+					while(it != _list.end())
 					{
-						list<Device::Properties*>::iterator	it = _list.begin();
-						while(it != _list.end())
-						{
-							(*it)->Show();
-
-							it++;	
-						}
+						it++;	
 					}
 				}
 			}
@@ -72,44 +63,38 @@ RetValue	ShellCommandDatabase
 			{
 				uint32_t	count = 0;
 
-				ret_value = data_manager->GetEndpointCount(count);
-				if (ret_value != RET_VALUE_OK)
-				{
-					_shell->Out() << "Failed to get endpoint count!" << endl;	
-				}
-				else
-				{
-					Endpoint::PropertiesList	_list;
+				count = data_manager->GetEndpointCount();
 
-					_shell->Out() << "Endpoint Count : " << _count << endl;
+				Endpoint::PropertiesList	_list;
 
-					ret_value = data_manager->GetEndpointProperties(0, _count, _list);
-					if (ret_value == RET_VALUE_OK)
+				_shell->Out() << "Endpoint Count : " << _count << endl;
+
+				ret_value = data_manager->GetEndpointProperties(0, _count, _list);
+				if (ret_value == RET_VALUE_OK)
+				{
+					_shell->Out() << setw(4) << setfill(' ');
+					_shell->Out() << " " << setw(16) << "Type";
+					_shell->Out() << " " << setw(16) << "ID";
+					_shell->Out() << " " << setw(4) << "Index";
+					_shell->Out() << " " << setw(16) << "Name";
+					_shell->Out() << " " << setw(8)  << "Enable";
+					_shell->Out() << " " << setw(8) << "Interval";
+					_shell->Out() << " " << setw(8) << "Value" << endl;
+
+					uint32_t	index = 0;
+					list<Endpoint::Properties*>::iterator	it = _list.begin();
+					while(it != _list.end())
 					{
-						_shell->Out() << setw(4) << setfill(' ');
-						_shell->Out() << " " << setw(16) << "Type";
-						_shell->Out() << " " << setw(16) << "ID";
-						_shell->Out() << " " << setw(4) << "Index";
-						_shell->Out() << " " << setw(16) << "Name";
-						_shell->Out() << " " << setw(8)  << "Enable";
-						_shell->Out() << " " << setw(8) << "Interval";
-						_shell->Out() << " " << setw(8) << "Value" << endl;
+						_shell->Out() << setw(4) << ++index;
+						_shell->Out() << " " << setw(16) << Endpoint::TypeToString((*it)->type);
+						_shell->Out() << " " << setw(16) << (*it)->id;
+						_shell->Out() << " " << setw(4) << (*it)->index;
+						_shell->Out() << " " << setw(16) << (*it)->name;
+						_shell->Out() << " " << setw(8)  << ((*it)->enable?"enabled":"disabled");
+						_shell->Out() << " " << setw(8) << (*it)->update_interval;
+						_shell->Out() << " " << setw(8) << (*it)->value_count << endl;
 
-						uint32_t	index = 0;
-						list<Endpoint::Properties*>::iterator	it = _list.begin();
-						while(it != _list.end())
-						{
-							_shell->Out() << setw(4) << ++index;
-							_shell->Out() << " " << setw(16) << Endpoint::TypeToString((*it)->type);
-							_shell->Out() << " " << setw(16) << (*it)->id;
-							_shell->Out() << " " << setw(4) << (*it)->index;
-							_shell->Out() << " " << setw(16) << (*it)->name;
-							_shell->Out() << " " << setw(8)  << ((*it)->enable?"enabled":"disabled");
-							_shell->Out() << " " << setw(8) << (*it)->update_interval;
-							_shell->Out() << " " << setw(8) << (*it)->value_count << endl;
-
-							it++;	
-						}
+						it++;	
 					}
 				}
 			}

@@ -33,6 +33,7 @@ Device::Properties::Properties()
 	name	=	id;
 	enable	=	false;
 }
+
 Device::Properties::Properties(Type _type)
 {
 	ostringstream	buffer;
@@ -59,11 +60,7 @@ Device::Properties::Properties
 	auto it = _properties.endpoint_list.cbegin();
 	while(it != _properties.endpoint_list.end())
 	{
-		Endpoint::Properties *endpoint_properties = (*it)->Duplicate();
-		if (endpoint_properties != NULL)
-		{
-			endpoint_list.push_back(endpoint_properties);
-		}
+		endpoint_list.push_back(*it);
 
 		it++;
 	}
@@ -79,7 +76,7 @@ Device::Properties::Properties
 
 	buffer << time.Milliseconds();
 
-	TRACE(NULL, "The Device properties created.");
+	INFO(NULL, "The Device properties created.");
 
 	type	= TYPE_UNKNOWN;
 	id		= "dev-" + buffer.str();
@@ -91,13 +88,6 @@ Device::Properties::Properties
 
 Device::Properties::~Properties()
 {
-	list<Endpoint::Properties*>::iterator	it = endpoint_list.begin();
-	while(it != endpoint_list.end())
-	{
-		delete (*it);	
-
-		it++;
-	}
 }
 
 Device::Properties*	Device::Properties::Create
@@ -111,7 +101,7 @@ Device::Properties*	Device::Properties::Create
 	{
 	case	Device::TYPE_FTE:	
 		{
-			TRACE(NULL, "Device FTE properties created.");
+			INFO(NULL, "Device FTE properties created." );
 			properties = new DeviceFTE::Properties;
 		}
 		break;
@@ -150,7 +140,7 @@ Device::Properties*	Device::Properties::Create
 	{
 	case	Device::TYPE_FTE:	
 		{
-			TRACE(NULL, "Device FTE properties created.");
+			INFO(NULL, "Device FTE properties created." );
 			properties = new DeviceFTE::Properties;
 		}
 		break;
@@ -165,10 +155,22 @@ Device::Properties*	Device::Properties::Create
 	}
 	else
 	{
-		cout << "Unknown device type!" << endl;
+		ERROR(NULL, RET_VALUE_INVALID_TYPE,  "Unknown device type[%d]!", type);
 	}
 
 	return	properties;
+}
+
+RetValue Device::Properties::Set
+(
+	Kompex::SQLiteStatement*	_statement
+)
+{
+	id 		= _statement->GetColumnString("_id");
+	name 	= _statement->GetColumnString("_name");
+	enable 	= _statement->GetColumnInt("_enable");
+
+	return	RET_VALUE_OK;
 }
 
 RetValue Device::Properties::Set
@@ -241,11 +243,35 @@ RetValue Device::Properties::Set
 	}
 	else if (strcasecmp(_node.name().c_str(), "endpoints") == 0)
 	{
-		AddEndpoints(_node);	
+		if(_node.type() == JSON_ARRAY)
+		{
+			for(int i = 0 ; i < (int)_node.size() ; i++)
+			{
+				if(_node[i].type() != JSON_STRING)
+				{
+					ret_value = RET_VALUE_INVALID_FIELD;		
+					break;
+				}
+
+				endpoint_list.push_back(_node[i].as_string());
+			}
+		}
+		else
+		{
+			ret_value = RET_VALUE_INVALID_TYPE;
+		}
+
 	}
 	else if (strcasecmp(_node.name().c_str(), "endpoint") == 0)
 	{
-		AddEndpoint(_node);	
+		if(_node.type() == JSON_STRING)
+		{
+			endpoint_list.push_back(_node.as_string());
+		}
+		else
+		{
+			ret_value = RET_VALUE_INVALID_FIELD;		
+		}
 	}
 	else if(_node.type() == JSON_NODE)
 	{
@@ -263,69 +289,6 @@ RetValue Device::Properties::Set
 	return	ret_value;
 }
 
-RetValue	Device::Properties::AddEndpoints
-(
-	const JSONNode& _node
-)
-{
-	RetValue ret_value = RET_VALUE_OK;
-
-	if(_node.type() == JSON_ARRAY)
-	{
-		for(int i = 0 ; i < (int)_node.size() ; i++)
-		{
-			ret_value = AddEndpoint(_node[i]);	
-			if (ret_value != RET_VALUE_OK)
-			{
-				break;
-			}
-		}
-	}
-	else
-	{
-		ret_value = RET_VALUE_INVALID_TYPE;
-	}
-
-	return	ret_value;
-}
-
-RetValue	Device::Properties::AddEndpoint
-(
-	const	JSONNode&	_node
-)
-{
-	RetValue ret_value = RET_VALUE_OK;
-
-	Endpoint::Properties*	endpoint_properties = Endpoint::Properties::Create(_node);
-
-	if (endpoint_properties != NULL)
-	{
-		endpoint_list.push_back(endpoint_properties);
-	}
-	else
-	{
-		ret_value = RET_VALUE_INVALID_FIELD;		
-	}
-
-	return	ret_value;
-}
-
-void	Device::Properties::Show()
-{
-
-	cout << setw(16) << "Type : " << Device::TypeToString(type) << endl;
-	cout << setw(16) << "ID : "   << id << endl;
-	cout << setw(16) << "Name : " << name << endl;
-	cout << setw(16) << "Enable : " << (enable?"true":"false") << endl;
-	cout << setw(16) << "Endpoint Count : " << endpoint_list.size() << endl;
-	std::list<Endpoint::Properties*>::iterator it = endpoint_list.begin();
-	while(it != endpoint_list.end())
-	{
-		cout << setw(16) << "" << (*it)->id << endl;
-		it++;	
-	}
-}
-
 Device::PropertiesList::~PropertiesList()
 {
 	list<Properties*>::iterator it = this->begin();
@@ -336,315 +299,122 @@ Device::PropertiesList::~PropertiesList()
 	}
 }
 
+uint32	Device::Properties::GetOptions
+(
+	uint8_t *options, 
+	uint32 options_len
+)
+{
+	return	0;
+}
 ///////////////////////////////////////////////////////////////////////////////////
 // Device Class
 ///////////////////////////////////////////////////////////////////////////////////
-Device::Device()
-: MessageProcess()
-{
-	struct timeval	time;
-	ostringstream	out;
-
-	gettimeofday(&time, NULL);
-
-	out << "device" << time.tv_sec << time.tv_usec;
-
-	properties_.type	= TYPE_UNKNOWN;
-	properties_.name 	= out.str();
-	properties_.id 		= out.str();
-	properties_.enable	= false;
-	activation_			= false;
-	schedule_thread_ 	= NULL;
-
-	TRACE(this, "Device[%s] created.", properties_.id.c_str());
-}
-
 Device::Device
 (
-	const Properties& _properties
-)
-: MessageProcess(), properties_(_properties)
-{
-	activation_ 		= false;
-	schedule_thread_ 	= NULL;
-
-	auto it = _properties.endpoint_list.cbegin();
-	while(it != _properties.endpoint_list.end())
-	{
-		Endpoint	*endpoint = Endpoint::Create(*it);
-		if (endpoint != NULL)
-		{
-			RetValue	ret_value;
-
-			TRACE(this, "Connect(%x)", endpoint);
-			ret_value = Connect(endpoint);	
-			if (ret_value != RET_VALUE_OK)
-			{
-				ERROR(this, ret_value, "Failed to attach to endpoint");
-				delete endpoint;	
-			}
-		}
-
-		it++;
-	}
-
-	TRACE(this, "Device[%s] created.", properties_.id.c_str());
-}
-
-Device::Device
-(
-	const Properties* _properties
-)
-: MessageProcess(), properties_(*_properties)
-{
-	activation_ 		= false;
-	schedule_thread_ 	= NULL;
-
-	auto it = properties_.endpoint_list.cbegin();
-	while(it != properties_.endpoint_list.end())
-	{
-		Endpoint	*endpoint = Endpoint::Create(*it);
-		if (endpoint != NULL)
-		{
-			RetValue	ret_value;
-
-			ret_value = Connect(endpoint);	
-			if (ret_value != RET_VALUE_OK)
-			{
-				ERROR(this, ret_value, "Failed to attach to endpoint");
-				delete endpoint;	
-			}
-		}
-
-		it++;
-	}
-
-	TRACE(this, "Device[%s] created.", properties_.id.c_str());
-}
-
-Device::Device
-(
-	const std::string &_id
+	Type _type
 )
 : MessageProcess()
 {
-	properties_.type	= TYPE_UNKNOWN;
-	properties_.name 	= _id;
-	properties_.id 		= _id;	
-	properties_.enable	= false;
+	ostringstream	buffer;
+
+	properties_ = Properties::Create(_type);
+
 	activation_			= false;
 	schedule_thread_ 	= NULL;
 
-	TRACE(this, "Device[%s] created.", properties_.id.c_str());
+	INFO(this, "Device[%s] created.", properties_->id.c_str());
 }
 
 Device::~Device()
 {
-	map<const string, Endpoint *>::iterator it = endpoint_list_.begin();
-	while(it != endpoint_list_.end())
-	{
-		Endpoint*	endpoint = it->second;
-	
-		endpoint_list_.erase(it);
+	INFO(this, "Device[%s] destroy.", properties_->id.c_str());
 
-		delete endpoint;
-
-		it++;
-	}
-
-	TRACE(this, "Device[%s] destroy.", properties_.id.c_str());
+	delete properties_;
 }
 
-void	Device::SetEnable
+RetValue 	Device::SetEnable
 (
 	bool _enable
 )
 {
-	if (properties_.enable != _enable)
+	if (properties_->enable != _enable)
 	{
-		properties_.enable = _enable;
+		properties_->enable = _enable;
+
+		if (object_manager_ != NULL)
+		{
+			object_manager_->SaveDevice(this);
+		}
 
 		if (IsRun())
 		{
-			if (properties_.enable == true)
+			if (properties_->enable == true)
 			{
 				Activation();
 			}
-			else if (properties_.enable == false)
+			else if (properties_->enable == false)
 			{
 				Deactivation();
 			}
 		}
 	}	
+
+	return	RET_VALUE_OK;
 }
 
-void	Device::SetName
+RetValue Device::SetName
 (
 	const string& _name
 )	
 {	
-	properties_.name = _name;	
+	properties_->name = _name;	
+
+	return	RET_VALUE_OK;
 }
 
-const 
-std::string&	Device::GetID()
-{
-	return	properties_.id;
-}
-
-Endpoint*	Device::CreateEndpoint
+RetValue	Device::SetProperties
 (
-	Endpoint::Type _type
-)
-{
-	RetValue	ret_value = RET_VALUE_OK;
-	Endpoint*	endpoint = Endpoint::Create(_type);
-
-	if (endpoint != NULL)
-	{
-		ret_value = Connect(endpoint);
-		if (ret_value != RET_VALUE_OK)
-		{
-			delete endpoint;	
-			endpoint = NULL;
-		}
-	}
-
-	return	endpoint;
-}
-
-Endpoint*	Device::CreateEndpoint
-(
-	const Endpoint::Properties& _properties
-)
-{
-	RetValue	ret_value = RET_VALUE_OK;
-	Endpoint*	endpoint = Endpoint::Create(&_properties);
-
-	if (endpoint != NULL)
-	{
-		ret_value = Connect(endpoint);
-		if (ret_value != RET_VALUE_OK)
-		{
-			delete endpoint;	
-			endpoint = NULL;
-		}
-	}
-
-	return	endpoint;
-}
-
-Endpoint*	Device::CreateEndpoint
-(
-	const Endpoint::Properties* _properties
-)
-{
-	RetValue	ret_value = RET_VALUE_OK;
-	Endpoint*	endpoint = Endpoint::Create(_properties);
-
-	if (endpoint != NULL)
-	{
-		ret_value = Connect(endpoint);
-		if (ret_value != RET_VALUE_OK)
-		{
-			delete endpoint;	
-			endpoint = NULL;
-		}
-	}
-
-	return	endpoint;
-}
-
-RetValue	Device::DeleteEndpoint
-(
-	Endpoint* _endpoint
-)
-{
-	RetValue	ret_value;
-	
-	ret_value = Disconnect(_endpoint);
-	if (ret_value == RET_VALUE_OK)
-	{
-		delete _endpoint;	
-	}
-
-	return	ret_value;
-}
-
-RetValue	Device::DeleteEndpoint
-(
-	const std::string& _id
-)
-{	
-	RetValue	ret_value;
-
-	Endpoint*	endpoint = GetEndpoint(_id);
-	if (endpoint == NULL)
-	{
-		ret_value = RET_VALUE_OBJECT_NOT_FOUND;	
-	}
-	else
-	{
-		ret_value = Disconnect(endpoint);
-		if (ret_value == RET_VALUE_OK)
-		{
-			delete endpoint;	
-		}
-	}
-
-	return	ret_value;
-
-}
-
-RetValue	Device::Connect
-(
-	Endpoint *_ep
+	const Properties& _properties
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	cout << _ep << " is connected to " << GetID() << endl;
-	map<const string, Endpoint *>::iterator it = endpoint_list_.find(_ep->GetID());
-	if (it == endpoint_list_.end())
-	{
-		endpoint_list_[_ep->GetID()] = _ep;
-
-		_ep->SetParent(this);
-	}
+	properties_->name 	= _properties.name;
+	properties_->id 	= _properties.id;
+	properties_->enable	= _properties.enable;
+	activation_ 		= false;
+	schedule_thread_ 	= NULL;
 
 	return	ret_value;
 }
 
-RetValue	Device::Disconnect
+RetValue Device::SetProperties
 (
-	Endpoint *_ep
+	const Properties* _properties
 )
 {
-	RetValue	ret_value;
+	RetValue	ret_value = RET_VALUE_OK;
 
-	if (_ep == NULL)
-	{
-		for(map<const string, Endpoint *>::iterator it = endpoint_list_.begin(); it != endpoint_list_.end() ; it++)
-		{
-			Endpoint *endpoint = it->second;
-			
-			endpoint_list_.erase(it);
-
-			endpoint->ReleaseParent();
-		}
-	}
-	else
-	{
-		map<const string, Endpoint *>::iterator it = endpoint_list_.find(_ep->GetID());
-		if (it != endpoint_list_.end())
-		{
-			endpoint_list_.erase(it);
-
-			_ep->ReleaseParent();
-		}
-	}
+	properties_->name 	= _properties->name;
+	properties_->id 	= _properties->id;
+	properties_->enable	= _properties->enable;
+	activation_ 		= false;
+	schedule_thread_ 	= NULL;
 
 	return	ret_value;
+}
+
+RetValue Device::SetProperties
+(
+	Kompex::SQLiteStatement*	_statement
+)
+{
+	properties_->id 	= _statement->GetColumnString("_id");
+	properties_->name 	= _statement->GetColumnString("_name");
+	properties_->enable = _statement->GetColumnInt("_enable");
+
+	return	RET_VALUE_OK;
 }
 
 RetValue	Device::SetProperties
@@ -672,7 +442,7 @@ RetValue	Device::SetProperties
 			}
 			else
 			{
-				properties_.name = node.as_string();
+				properties_->name = node.as_string();
 			}
 		}
 		else if (node.name() == "id")
@@ -684,12 +454,29 @@ RetValue	Device::SetProperties
 			}
 			else
 			{
-				properties_.id = node.as_string();
+				properties_->id = node.as_string();
+			}
+		}
+		else if (node.name() == "enable")
+		{
+			if ((node.type() != JSON_NUMBER) && (node.type() != JSON_NULL))
+			{
+				ret_value = RET_VALUE_INVALID_FIELD;
+				ERROR(this,RET_VALUE_INVALID_FIELD, "");	
+			}
+			else
+			{
+				properties_->enable = node.as_int();
 			}
 		}
 	}
 
 	return	ret_value;
+}
+
+Device::Properties*	Device::GetProperties()
+{
+	return	properties_;
 }
 
 void	Device::PreProcess()
@@ -716,64 +503,11 @@ void	Device::PostProcess()
 
 }
 
-uint32		Device::GetEndpointCount()
-{
-	return	endpoint_list_.size();
-}
-
-Endpoint*	Device::GetEndpoint
-(
-	int	_index
-)
-{
-	map<const string, Endpoint *>::iterator it = endpoint_list_.begin();
-	for(;_index > 0 && it != endpoint_list_.end() ; it++, _index--)
-	{
-	}
-
-	if (it != endpoint_list_.end())
-	{
-		return	it->second;	
-	}
-	
-	return	NULL;
-}
-
-Endpoint*	Device::GetEndpoint
-(
-	const std::string _id
-)
-{
-	map<const string, Endpoint *>::iterator it = endpoint_list_.find(_id);
-	if (it != endpoint_list_.end())
-	{
-		return	it->second;	
-	}
-
-	return	NULL;
-}
-
-RetValue	Device::GetValue
-(
-	Endpoint* _endpoint
-)
-{
-	return	RET_VALUE_OK;
-}
-
-RetValue	Device::SetValue
-(
-	Endpoint* _endpoint
-)
-{
-	return	RET_VALUE_OK;
-}
-
 RetValue	Device::Activation()
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	if (properties_.enable)
+	if (properties_->enable)
 	{
 		if (!activation_)
 		{
@@ -781,7 +515,7 @@ RetValue	Device::Activation()
 			if (schedule_thread_ == NULL)
 			{
 				ret_value = RET_VALUE_NOT_ENOUGH_MEMORY;
-				ERROR(this, ret_value, "The device[%s] can not be activated!", properties_.id.c_str());
+				ERROR(this, ret_value, "The device[%s] can not be activated!", properties_->id.c_str());
 			}
 			else
 			{
@@ -790,7 +524,7 @@ RetValue	Device::Activation()
 					usleep(1000);
 				}
 
-				TRACE(this, "New thread[%08x] created", schedule_thread_->get_id());
+				INFO(this, "New thread[0x%08x] created." , schedule_thread_->get_id());
 				activation_ = true;
 			}
 		}
@@ -817,68 +551,98 @@ RetValue	Device::Deactivation()
 	return	ret_value;
 }
 
-RetValue	Device::Activation
+RetValue	Device::SetActivation
 (
-	const std::string& _id
+	bool	_activation
 )
 {
-	Endpoint *endpoint = GetEndpoint(_id);
-
-	if (endpoint == NULL)
+	if (_activation)
 	{
-		return	RET_VALUE_OBJECT_NOT_FOUND;
+		return	Activation();	
 	}
-
-	return	Activation(endpoint);
+	else
+	{
+		return	Deactivation();	
+	}
 }
 
-RetValue	Device::Deactivation
+RetValue	Device::Connect
 (
-	const std::string& _id
+	const string&	_endpoint_id
 )
 {
-	Endpoint *endpoint = GetEndpoint(_id);
+	RetValue	ret_value = RET_VALUE_OK;
+	Endpoint* endpoint;
 
+	endpoint = object_manager_->GetEndpoint(_endpoint_id);
 	if (endpoint == NULL)
 	{
-		return	RET_VALUE_OBJECT_NOT_FOUND;
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+		ERROR(this, ret_value, "Failed to get endpoint[%s].", _endpoint_id.c_str());
+	}
+	else
+	{
+		TimeoutTimer	timer(Time::GetCurrentTime());
+
+		timer.Add(endpoint->GetUpdateInterval());
+
+		ret_value = endpoint_scheduler_.Push(timer, _endpoint_id);
+		if (ret_value == RET_VALUE_OK)
+		{
+			INFO(this, "The endpoint[%s] is connected to device[%s].", _endpoint_id.c_str(), properties_->id.c_str());
+		}
+		else
+		{
+			INFO(this, "Failed to connect endpoint[%s] to device[%s].", _endpoint_id.c_str(), properties_->id.c_str());
+		}
 	}
 
-	return	Deactivation(endpoint);
+	return	ret_value;
 }
 
-RetValue	Device::Activation
+RetValue	Device::Disconnect
+(
+	const string& _endpoint_id
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+
+	ret_value = endpoint_scheduler_.Pop(_endpoint_id, true);
+	if (ret_value == RET_VALUE_OK)
+	{
+		INFO(this, "The endpoint[%s] is disconnected from device[%s].", _endpoint_id.c_str(), properties_->id.c_str());
+	}
+	else
+	{
+		INFO(this, "Failed to disconnect endpoint[%s] from device[%s].", _endpoint_id.c_str(), properties_->id.c_str());
+	}
+
+	return	ret_value;
+}
+
+RetValue	Device::GetEndpointValue
 (
 	Endpoint* _endpoint
 )
 {
-	TRACE_ENTRY(this);
-	TimeoutTimer	timer(Time::GetCurrentTime());
-
-	timer.Add(_endpoint->UpdateInterval());
-
-	TRACE(this, "The endpoint[%s] is activated!", _endpoint->GetID().c_str());
-	return	endpoint_scheduler_.Push(timer, _endpoint->GetID());
-}
-
-RetValue		Device::Deactivation
-(
-	Endpoint* _endpoint
-)
-{
-	endpoint_scheduler_.Pop(_endpoint->GetID(), true);
-
-	TRACE(this, "The endpoint[%s] is deactivated!", _endpoint->GetID().c_str());
 	return	RET_VALUE_OK;
 }
 
+RetValue	Device::SetEndpointValue
+(
+	Endpoint* _endpoint
+)
+{
+	return	RET_VALUE_OK;
+}
 
 void	Device::OnMessage
 (
 	Message *_message
 )
 {
-	TRACE(this,"Message Received[%s]", ToString(_message).c_str());
+	INFO(this, "Message Received[%s]", ToString(_message).c_str() );
 	switch(_message->type)
 	{
 	case	Message::TYPE_STARTED:
@@ -975,15 +739,13 @@ void Device::DeviceScheduleProcess
 	Device *_device
 )
 {
+	LoopTimer	loop_timer(100);
 
-	TRACE(_device, "The device[%s] Scheduler started!", _device->GetID().c_str());
+	INFO(_device, "The device[%s] Scheduler started!", _device->GetID().c_str());
 	_device->schedule_stop_ = false;
 
-	auto it = _device->endpoint_list_.begin();
-	for(; it != _device->endpoint_list_.end(); it++)
-	{
-		it->second->Activation();
-	}
+
+	loop_timer.Start();
 
 	while(!_device->schedule_stop_)
 	{
@@ -994,10 +756,10 @@ void Device::DeviceScheduleProcess
 			{
 				_device->endpoint_scheduler_.Pop();
 
-				Endpoint*	endpoint = _device->GetEndpoint(item->data);
+				Endpoint*	endpoint = _device->object_manager_->GetEndpoint(item->data);
 				if (endpoint == NULL)
 				{
-					TRACE(_device,"Endpoint not found!");
+					INFO(_device,"Endpoint not found!");
 					delete item;
 				}
 				else
@@ -1012,29 +774,30 @@ void Device::DeviceScheduleProcess
 							ERROR(_device, ret_value, "Failed to synchronize endpoint.");
 						}
 
-						item->timer.Add(endpoint->UpdateInterval());
+						item->timer.Add(endpoint->GetUpdateInterval());
 						_device->endpoint_scheduler_.Push(item);
 					}
 					else
 					{
-						TRACE(_device, "The endpoint[%s] is deactivated.", endpoint->GetID().c_str());
+						//INFO(NULL, "The endpoint[%s] is deactivated.", endpoint->GetID().c_str());
 					}
 				}
 			}
 		}
 
-		usleep(100000);	
+		loop_timer.WaitingForExpired();
 	}
 
-	TRACE(_device, "The device[%s] Scheduler stopped!", _device->GetID().c_str());
+	INFO(_device, "The device[%s] Scheduler stopped!", _device->GetID().c_str());
+
 }
 
 ///////////////////////////////////////////////////////
 // Global functions
 ///////////////////////////////////////////////////////
-Device*		Device::Create
+	Device*		Device::Create
 (
-	Device::Type _type
+ Device::Type _type
 )
 {
 	Device* device ;
@@ -1062,11 +825,16 @@ Device*		Device::Create
 	switch(_properties->type)
 	{
 	case	Device::TYPE_FTE:
-		device = new DeviceFTE(*(DeviceFTE::Properties *)_properties);
+		device = new DeviceFTE;
 		break;
 
 	default:
 		device = NULL;
+	}
+
+	if (device != NULL)
+	{
+		device->SetProperties(*(DeviceFTE::Properties *)_properties);
 	}
 
 	return	device;
@@ -1078,8 +846,8 @@ ostream& operator<<
 	const Device& _device
 )
 {
-	_os << "Name : " << _device.properties_.name << endl;
-	_os << "  ID : " << _device.properties_.id << endl;
+	_os << "Name : " << _device.properties_->name << endl;
+	_os << "  ID : " << _device.properties_->id << endl;
 
 	return	_os;
 }

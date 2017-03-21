@@ -1,9 +1,11 @@
 #include <iostream>
 #include <iomanip>
 #include "shell.h"
+#include "shell_command.h"
 #include "object_manager.h"
 #include "data_manager.h"
 #include "device.h"
+#include "string_utils.h"
 
 using namespace std;
 
@@ -36,18 +38,19 @@ RetValue	ShellCommandDevice
 			}
 			else
 			{
-				uint32_t	index;
+				uint32	index = 3;
 
 				Device::Properties	*properties = Device::Properties::Create(type);
 				if (properties == NULL)
 				{
+					_shell->Out() << "Invalid device type [" << type << "]" << endl;
 					ret_value = RET_VALUE_INVALID_ARGUMENTS;	
 				}
 				else
 				{
 					while(index < _count)
 					{
-						if (strcasecmp(_arguments[index].c_str(), "--id") == 0)
+						if (caseInsCompare(_arguments[index], "--id"))
 						{
 							if(index+1 < _count)
 							{
@@ -56,12 +59,13 @@ RetValue	ShellCommandDevice
 							else
 							{
 								ret_value = RET_VALUE_INVALID_ARGUMENTS;
+								_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
 								break;	
 							}
 
 							index += 2;
 						}
-						else if (strcasecmp(_arguments[index].c_str(), "--name") == 0)
+						else if (caseInsCompare(_arguments[index], "--name"))
 						{
 							if(index+1 < _count)
 							{
@@ -70,6 +74,7 @@ RetValue	ShellCommandDevice
 							else
 							{
 								ret_value = RET_VALUE_INVALID_ARGUMENTS;
+								_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
 								break;	
 							}
 
@@ -78,27 +83,17 @@ RetValue	ShellCommandDevice
 						else
 						{
 							ret_value = RET_VALUE_INVALID_ARGUMENTS;
+								_shell->Out() << "Invalid argument option[" << _arguments[index] << "]" << endl;
 							break;	
 						}
 					}
 
 					if (ret_value == RET_VALUE_OK)
 					{
-						Device*	device = Device::Create(properties);
-						if (device == NULL)
+						ret_value = object_manager->CreateDevice(properties);
+						if (ret_value != RET_VALUE_OK)
 						{
-							_shell->Out() << "Failed to create device[" << _arguments[2] <<"]!" << endl;
-						}
-						else
-						{
-							_shell->Out() << "The device[" << _arguments[2] << "] was succefully created." << endl;
-							ret_value = object_manager->Connect(device);
-							if (ret_value != RET_VALUE_OK)
-							{
-								_shell->Out() << "Failed to attach device[" << _arguments[2] << "] at object manager!" << endl;
-								delete device;
-
-							}
+							_shell->Out() << "Failed to create device[" << _arguments[2] << "] at object manager!" << endl;
 						}
 					}
 
@@ -108,27 +103,18 @@ RetValue	ShellCommandDevice
 		}
 		else if ((_count >= 3) && (_arguments[1] == "delete"))
 		{
-			uint32_t	index;
+			uint32	index;
 
 			for(index = 2; index < _count ; index++)
 			{
-				Device*	device = object_manager->GetDevice(_arguments[index]);
-				if (device == NULL)
+				ret_value = object_manager->DestroyDevice(_arguments[index]);
+				if (ret_value == RET_VALUE_OK)
 				{
-					_shell->Out() << "Failed to get device[" << _arguments[index] << "]." << endl;
+					_shell->Out() << "The device[" << _arguments[index] << "] was detached." << endl;
 				}
 				else
 				{
-					ret_value = object_manager->Disconnect(device);
-					if (ret_value == RET_VALUE_OK)
-					{
-						delete device;
-						_shell->Out() << "The device[" << _arguments[index] << "] was detached." << endl;
-					}
-					else
-					{
-						_shell->Out() << "Failed to detach the device[" << _arguments[index] << "]." << endl;
-					}
+					_shell->Out() << "Failed to detach the device[" << _arguments[index] << "]." << endl;
 				}
 			}
 		}
@@ -142,36 +128,78 @@ RetValue	ShellCommandDevice
 			}
 			else
 			{
-				if (_count == 2)
+				switch(_count)
 				{
-				}
-				else if (_arguments[2] == "activate")
-				{
-					ret_value = device->Activation();
-					if (ret_value == RET_VALUE_OK)
+				case	3:
 					{
-						_shell->Out() << "The device[" << device->GetID() << "] is activated." << endl;
+						if (caseInsCompare(_arguments[2], "type"))
+						{
+							_shell->Out() << "The deive[" << _arguments[1] << "] type is " << Device::TypeToString(device->GetType()) << endl;
+						}
+						else if (caseInsCompare(_arguments[2], "name"))
+						{
+							_shell->Out() << "The deive[" << _arguments[1] << "] name is " << device->GetName() << endl;
+						}
+						else if (caseInsCompare(_arguments[2], "state"))
+						{
+							_shell->Out() << "The deive[" << _arguments[1] << "] state is " << (device->IsEnabled()?"enabled":"disabled") << endl;
+						}
+						else if (caseInsCompare(_arguments[2],"enable"))
+						{
+							device->SetEnable(true);
+							_shell->Out() << "The device[" << _arguments[1] << "] is enabled." << endl;
+						}
+						else if (caseInsCompare(_arguments[2], "disable"))
+						{
+							device->SetEnable(false);
+							_shell->Out() << "The device[" << _arguments[1] << "] is disabled." << endl;
+						}
+						else if (caseInsCompare(_arguments[2], "activate"))
+						{
+							ret_value = object_manager->SetDeviceActivation(_arguments[1], true);
+							if (ret_value == RET_VALUE_OK)
+							{
+								_shell->Out() << "The device[" << _arguments[1] << "] is activated." << endl;
+							}
+							else
+							{
+								_shell->Out() << "The device[" << _arguments[1] << "] is failed to activation." << endl;
+							}
+						}
+						else if (caseInsCompare(_arguments[2], "deactivate"))
+						{
+							ret_value = object_manager->SetDeviceActivation(_arguments[1], false);
+							if (ret_value == RET_VALUE_OK)
+							{
+								_shell->Out() << "The device[" << _arguments[1] << "] is deactivated." << endl;
+							}
+							else
+							{
+								_shell->Out() << "The device[" << _arguments[1] << "] is failed to deactivation." << endl;
+							}
+						}
+						else
+						{
+							ret_value = RET_VALUE_NOT_SUPPORTED_FUNCTION;	
+						}
 					}
-					else
+					break;
+
+				case	4:
 					{
-						_shell->Out() << "The device[" << device->GetID() << "] is failed to activation." << endl;
+						if (caseInsCompare(_arguments[2], "name"))
+						{
+							ret_value = object_manager->SetDeviceName(_arguments[1], _arguments[3]);
+							if (ret_value == RET_VALUE_OK)
+							{
+								_shell->Out() << "The deive[" << _arguments[1] << "] name was changed to  " << _arguments[3] << endl;
+							}
+							else 
+							{
+								_shell->Out() << "Failed to change deive[" << _arguments[1] << "] name." << endl;
+							}
+						}
 					}
-				}
-				else if (_arguments[2] == "deactivate")
-				{
-					ret_value = device->Deactivation();
-					if (ret_value == RET_VALUE_OK)
-					{
-						_shell->Out() << "The device[" << device->GetID() << "] is deactivated." << endl;
-					}
-					else
-					{
-						_shell->Out() << "The device[" << device->GetID() << "] is failed to deactivation." << endl;
-					}
-				}
-				else
-				{
-					ret_value = RET_VALUE_NOT_SUPPORTED_FUNCTION;	
 				}
 			}
 		}
@@ -191,3 +219,20 @@ RetValue	ShellCommandDevice
 
 	return	ret_value;
 }
+
+ShellCommand<ObjectManager>	object_manager_command_device =
+{
+	.name		= "device",
+	.help		= "<command>\n"
+				"\tManagement of device.\n"
+				"COMMANDS:\n"
+				"\tcreate <TYPE> [OPTIONS]\n"
+				"OPTIONS:\n"
+				"\t--id <ID>\n"
+				"\t\tUnique identifier\n"
+				"\t--name <NAME>\n"
+				"\t\tName\n",
+	.short_help	= "Management of device.",
+	.function	= ShellCommandDevice
+};
+

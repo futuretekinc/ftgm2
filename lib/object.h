@@ -4,7 +4,8 @@
 #include "defined.h"
 #include <iostream>
 #include <cstdarg>
-#include "mutex.h"
+#include "locker.h"
+#include <string>
 
 class	Object
 {
@@ -12,28 +13,23 @@ public:
 	Object();
 	virtual	~Object();
 
-	virtual const std::string& ClassName();
+	virtual const std::string ClassName();
 
 	virtual	bool	Lock();
 	virtual	bool	Unlock();
 	virtual	bool	IsLocked();
-
-	virtual	void	Error(std::ostream& out, int index, const std::string& _function, int _line, int _code,  const char* _format, va_list _variable_list);
-	virtual	void	Trace(std::ostream& out, int index, const std::string& _function, int _line, const char* _format, va_list _variable_list);
-
-	virtual	void	Error(bool on_);
-	virtual	void	Trace(bool on_);
 
 protected:
 			void	SetParent(Object* _parent)	{	parent_ = _parent; }
 			Object*	GetParent()					{	return	parent_;	}
 	virtual	void	ReleaseParent();
 
-	Mutex	mutex_;
-	bool	trace_on_;
-	bool	error_on_;
+	std::string	class_name_;
+	Locker		locker_;
+	bool		trace_on_;
+	bool		error_on_;
 
-	Object*	parent_;
+	Object*		parent_;
 };
 
 

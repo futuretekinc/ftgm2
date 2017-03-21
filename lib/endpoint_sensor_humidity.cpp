@@ -4,7 +4,7 @@
 using namespace std;
 
 EndpointSensorHumidity::Properties::Properties()
-: EndpointSensor::Properties(TYPE_SENSOR_HUMIDITY) 
+: EndpointSensor::Properties(HUMIDITY_SENSOR) 
 {
 }
 
@@ -30,7 +30,7 @@ EndpointSensorHumidity::Properties::Properties
 ) 
 : EndpointSensor::Properties(_node) 
 {
-	type = TYPE_SENSOR_HUMIDITY;
+	type = HUMIDITY_SENSOR;
 }
 
 EndpointSensorHumidity::Properties*	EndpointSensorHumidity::Properties::Duplicate()
@@ -43,7 +43,7 @@ EndpointSensorHumidity::Properties*	EndpointSensorHumidity::Properties::Duplicat
 //////////////////////////////////////////////////////////////////////////
 
 EndpointSensorHumidity::EndpointSensorHumidity()
-:	EndpointSensor(TYPE_SENSOR_HUMIDITY)
+:	EndpointSensor(HUMIDITY_SENSOR)
 {
 }
 
@@ -51,7 +51,7 @@ EndpointSensorHumidity::EndpointSensorHumidity
 (
 	const string&	_id
 )
-:	EndpointSensor(TYPE_SENSOR_HUMIDITY, _id)
+:	EndpointSensor(HUMIDITY_SENSOR, _id)
 {
 }
 

@@ -4,6 +4,7 @@
 #include "timer.h"
 #include <list>
 #include <vector>
+#include "locker.h"
 
 template <typename T>
 struct	ScheduleItem
@@ -30,7 +31,7 @@ class	Scheduler
 public:
 
 	Scheduler()
-	:	list_()
+	:	list_(),locker_()
 	{
 	}
 
@@ -59,19 +60,28 @@ public:
 
 	RetValue	Push(ScheduleItem<T>* _item)
 	{
+		locker_.Lock();
+
 		typename std::list<ScheduleItem<T>*>::iterator it = list_.begin();
 		while(it != list_.end())
 		{
 			if ((*it)->timer.Milliseconds() > _item->timer.Milliseconds())
 			{
-				std::cout << "Insert : " << _item->data << "  " << _item->timer.ToString() << std::endl;
-				list_.insert(it, _item);
-				return	RET_VALUE_OK;
+				break;
 			}
 			it++;
 		}
 	
-		list_.push_back(_item);
+		if (it != list_.end())
+		{
+			list_.insert(it, _item);
+		}
+		else
+		{
+			list_.push_back(_item);
+		}
+
+		locker_.Unlock();
 
 		return	RET_VALUE_OK;
 	}
@@ -89,20 +99,28 @@ public:
 		return	ret_value;
 	}
 
-	void	Pop(bool destroy = false)
+	void	Pop(bool _destroy = false)
 	{
+		locker_.Lock();
+
 		ScheduleItem<T> *item = list_.front();
 
 		list_.pop_front();	
 
-		if (destroy && (item != NULL))
+		if (_destroy && (item != NULL))
 		{
 			delete item;
 		}
+
+		locker_.Unlock();
 	}
 
-	void	Pop(const T& _data, bool destroy = false)
+	RetValue	Pop(const T& _data, bool _destroy = false)
 	{	
+		RetValue	ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+
+		locker_.Lock();
+		
 		typename std::list<ScheduleItem<T>*>::iterator it = list_.begin();
 		while(it != list_.end())
 		{
@@ -112,18 +130,24 @@ public:
 
 				list_.erase(it);
 
-				if (destroy && (item != NULL))
+				if (_destroy && (item != NULL))
 				{
 					delete item;
 				}
+
+				ret_value = RET_VALUE_OK;
+				break;
 			}
 		}
 
-		
+		locker_.Unlock();
+
+		return	ret_value;	
 	}
 
 private:
 	std::list<ScheduleItem<T> *> list_;
+	Locker	locker_;						
 };
 
 #endif

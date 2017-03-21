@@ -8,57 +8,22 @@
 
 using namespace std;
 
-RetValue	ShellCommandDevice
-(
-	std::string* _arguments, 
-	uint32_t	_count,
-	Shell<ObjectManager>* _shell
-);
+extern	ShellCommand<ObjectManager>	object_manager_command_device;
+extern	ShellCommand<ObjectManager>	object_manager_command_endpoint;
+extern	ShellCommand<ObjectManager>	object_manager_command_trace;
+extern	ShellCommand<ObjectManager>	object_manager_command_help;
+extern	ShellCommand<ObjectManager>	object_manager_command_help2;
+extern	ShellCommand<ObjectManager>	object_manager_command_quit;
 
-RetValue	ShellCommandEndpoint
-(
-	std::string* _arguments, 
-	uint32_t	_count,
-	Shell<ObjectManager>* _shell
-);
-
-RetValue	ShellCommandDatabase
-(
-	std::string* _arguments, 
-	uint32_t	_count,
-	Shell<ObjectManager>* _shell
-);
-
-RetValue	ShellCommandDebug
-(
-	std::string* _arguments, 
-	uint32_t	_count,
-	Shell<ObjectManager>* _shell
-);
-
-RetValue	ShellCommandHelp
-(
-	std::string* _arguments, 
-	uint32_t	_count,
-	Shell<ObjectManager>* _shell
-);
-
-RetValue	ShellCommandQuit
-(
-	std::string* _arguments, 
-	uint32_t	_count,
-	Shell<ObjectManager>* _shell
-);
-
-ShellCommand<ObjectManager>	object_manager_shell_commands[] = 
+ShellCommand<ObjectManager>*	object_manager_shell_commands[] = 
 {
-	ShellCommand<ObjectManager>("device", 	"devcice", 	"device", 	ShellCommandDevice),
-	ShellCommand<ObjectManager>("endpoint","endpoint", "endpoint", 	ShellCommandEndpoint),
-	ShellCommand<ObjectManager>("debug", 	"debug", 	"debug", 	ShellCommandDebug),
-	ShellCommand<ObjectManager>("help", 	"help", 	"help", 	ShellCommandHelp),
-	ShellCommand<ObjectManager>("?", 		"help", 	"help", 	ShellCommandHelp),
-	ShellCommand<ObjectManager>("quit",		"quit", 	"quit",		ShellCommandQuit)
+	&object_manager_command_device,
+	&object_manager_command_endpoint,
+	&object_manager_command_trace,
+	&object_manager_command_help,
+	&object_manager_command_help2,
+	&object_manager_command_quit
 };
 
-int	object_manager_shell_command_count = sizeof(object_manager_shell_commands) / sizeof(ShellCommand<ObjectManager>);
+int	object_manager_shell_command_count = sizeof(object_manager_shell_commands) / sizeof(ShellCommand<ObjectManager> *);
 

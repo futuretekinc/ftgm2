@@ -10,22 +10,19 @@ class	DeviceFTE : public DeviceSNMP
 public:
 	struct	Properties : DeviceSNMP::Properties
 	{
-		Properties() : DeviceSNMP::Properties(TYPE_FTE){}
-		Properties(const JSONNode& _node);
+		Properties();
 	};
 
 				DeviceFTE();
-				DeviceFTE(const Properties& _properties);
-				DeviceFTE(const Properties* _properties);
 				~DeviceFTE();
 
 	virtual	
 	RetValue	SetProperties (const JSONNode&	node);
 
 	virtual
-	RetValue		GetValue(Endpoint* _endpoint);
+	RetValue	GetEndpointValue(Endpoint* _endpoint);
 	virtual
-	RetValue		SetValue(Endpoint* _endpoint);
+	RetValue	SetEndpointValue(Endpoint* _endpoint);
 
 protected:
 	SNMPObject*		GetValueObject(Endpoint::Type _type, uint32_t _index);

@@ -5,38 +5,58 @@
 #include "object.h"
 #include <string>
 #include <ostream>
+#include <sstream>
+#include <mutex>
+#include <map>
 
-class	Debug
+class	Trace
 {
 public:
-	Debug();
+	enum	Level
+	{
+		OFF=0,
+		INFO,
+		WARN,
+		ERROR,
+		CRITICAL,
+		FATAL
+	};
 
-	bool	Trace()	{	return	trace_on_;	};
-	bool	Error()	{	return	error_on_;	};
+	struct	Properties
+	{
+		std::string	name;
+		Level		level;
+	};
 
-	void	Trace(bool _on);
-	void	Error(bool _on);
+	Trace();
 
-	void	Trace(Object *object, const std::string& function_, int line_, const char* format, ...);
-	void	Error(Object *object, const std::string& function_, int line_, int code_, const char* format, ...);
+	RetValue	SetLevel(Object *object, Level _level);
+	RetValue	SetLevel(const std::string& _name, Level _level);
+	RetValue	SetLevel(const char *_name, Level _level);
+	RetValue	SetLevel(const std::string& _name, const std::string& _level);
+	RetValue	SetLevel(const char * _name, const char *_level);
+	static const
+	std::string	GetLevelString(Level _level);
+	static 
+	Level		ToLevel(const std::string& _level);
 
+	Properties*	GetProperties(const std::string& _name);
+	Properties*	GetPropertiesAt(uint32 index);
+
+	void		Print(Object *object, Level _level, const std::string& _function, int _line, RetValue _code, const char* _format, ...);
 protected:
+	void	Output(Level		_level, std::string _name, std::string _function, uint32 _line, RetValue	_ret_value, const char* _message);
+
 	int				output_line_;
-	std::ostream*	output_;
-	bool			trace_on_;
-	bool			error_on_;
+	std::string		file_name_;
+	std::map<std::string, Properties *>	class_map_;
 };
 
-extern	Debug	debug;
+extern	Trace	_trace;
 
-#define	TRACE_ON()						{	debug.Trace(true);	}
-#define	TRACE_OFF()						{	debug.Trace(false);	}
-#define	TRACE(object, format, ...)		{	debug.Trace(object, __func__, __LINE__, format, ## __VA_ARGS__); }
-#define	TRACE_ENTRY(object)				{	debug.Trace(object, __func__, __LINE__, "entry"); }
-#define	TRACE_EXIT(object)				{	debug.Trace(object, __func__, __LINE__, "exit") ; }
-
-#define	ERROR_ON()						{	debug.Error(true);	}
-#define	ERROR_OFF()						{	debug.Error(false);	}
-#define	ERROR(object, code, format, ...){	debug.Error(object, __func__, __LINE__, code, format, ## __VA_ARGS__); }
+#define	ASSERT(x)						{}
+#define	TRACE_SET_LEVEL(name, level)	{	_trace.SetLevel(name, level);	}
+#define	INFO(object, format, ...)		{	_trace.Print(object, 	Trace::Level::INFO,	__func__, __LINE__, 0, 		format, ## __VA_ARGS__); }
+#define	ERROR(object, code, format, ...){	_trace.Print(object,	Trace::Level::ERROR,__func__, __LINE__, code, 	format, ## __VA_ARGS__); }
 
 #endif

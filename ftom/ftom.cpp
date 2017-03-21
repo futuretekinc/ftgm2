@@ -17,8 +17,10 @@
 
 using namespace std;
 
-extern	ShellCommand<ObjectManager>	object_manager_shell_commands[];
+extern	ShellCommand<ObjectManager>*	object_manager_shell_commands[];
 extern	int	object_manager_shell_command_count;
+
+Trace	trace;
 
 int main
 (
@@ -27,18 +29,18 @@ int main
 )
 {
 	int		option;
-	bool	start_shell = false;
+	bool	start_shell = true;
 	bool	show_usage = false;
 	bool	load_from_file = false;
 	string	config_file_name = string(program_invocation_short_name) + string(".conf");
 
-	while((option = getopt(argc, argv, "si?")) != -1) 
+	while((option = getopt(argc, argv, "di?")) != -1) 
 	{   
 		switch(option)
 		{   
-		case    's':
+		case    'd':
 			{   
-				start_shell = true;
+				start_shell = false;
 			}   
 			break;
 
@@ -58,8 +60,9 @@ int main
 	ObjectManager*	om = new ObjectManager;
 	DataManager*	dm = new DataManager;
 
-	TRACE_ON();
-	ERROR_ON();
+	TRACE_SET_LEVEL(om, Trace::Level::INFO);
+	TRACE_SET_LEVEL(dm, Trace::Level::INFO);
+	TRACE_SET_LEVEL("global", Trace::Level::INFO);
 
 	om->Load(config_file_name);
 	om->Connect(dm);

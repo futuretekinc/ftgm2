@@ -47,12 +47,27 @@ public:
 	uint64_t	Milliseconds();
 	uint64_t	RemainTime();
 	bool		IsExpired();
+	uint64_t	WaitingForExpired();
 	void		Add(uint64_t	_milliseconds);
 
 	std::string	ToString();
 
-private:
+protected:
 	struct timeval time_;
 };
+
+class	LoopTimer : public TimeoutTimer
+{
+public:
+	LoopTimer(uint32_t _interval);
+	LoopTimer(const Time& _time, uint32_t _interval);
+	uint64_t	WaitingForExpired();
+
+	void	Start();
+
+protected:
+	uint32_t	interval_;
+};
+
 #endif
 

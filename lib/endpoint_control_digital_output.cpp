@@ -3,7 +3,7 @@
 using namespace std;
 
 EndpointControlDigitalOutput::Properties::Properties()
-: EndpointControl::Properties(TYPE_CONTROL_DIGITAL_OUTPUT)
+: EndpointControl::Properties(DO_CONTROL)
 {
 }
 
@@ -13,7 +13,7 @@ EndpointControlDigitalOutput::Properties::Properties
 ) 
 : EndpointControl::Properties(_node) 
 {
-	type = TYPE_CONTROL_DIGITAL_OUTPUT;
+	type = DO_CONTROL;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -22,7 +22,7 @@ EndpointControlDigitalOutput::Properties::Properties
 //////////////////////////////////////////////////////////////////////////
 
 EndpointControlDigitalOutput::EndpointControlDigitalOutput()
-:	EndpointControl(Endpoint::TYPE_CONTROL_DIGITAL_OUTPUT)
+:	EndpointControl(Endpoint::DO_CONTROL)
 {
 }
 
@@ -30,7 +30,7 @@ EndpointControlDigitalOutput::EndpointControlDigitalOutput
 (
 	const string& _id
 )
-:	EndpointControl(Endpoint::TYPE_CONTROL_DIGITAL_OUTPUT, _id)
+:	EndpointControl(Endpoint::DO_CONTROL, _id)
 {
 }
 

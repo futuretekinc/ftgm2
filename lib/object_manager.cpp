@@ -15,30 +15,25 @@
 using namespace	std;
 
 ObjectManager::ObjectManager()
+:	MessageProcess()
 {
 }
 
 ObjectManager::~ObjectManager()
 {
-	map<const string, Device *>::iterator device_it = device_map_.begin();
-	for(; device_it != device_map_.end() ; device_it++)
-	{
-//		delete device_it->second;
-	}
-}
-
-const 
-std::string&	ObjectManager::ClassName()
-{
-	return	typeid(*this).name();
 }
 
 void	ObjectManager::PreProcess()
 {
+	INFO(this, "Pre-process start.");
 	if (data_manager_ != NULL)
 	{
 		data_manager_->Start(1000);	
+
+		LoadFromDataManager();
 	}
+
+	INFO(this, "Pre-process done.");
 }
 
 void	ObjectManager::PostProcess()
@@ -89,6 +84,10 @@ RetValue	ObjectManager::Load
 				{
 					LoadDevice(root[i]);	
 				}
+				else if (root[i].name() == "endpoint")
+				{
+					LoadEndpoint(root[i]);	
+				}
 			}
 		}
 		delete	[] buffer;
@@ -107,6 +106,90 @@ RetValue	ObjectManager::Load
 ////////////////////////////////////////////////////////////////
 //	for Device
 ////////////////////////////////////////////////////////////////
+RetValue	ObjectManager::CreateDevice
+(
+	Device::Properties *_properties
+)
+{
+	RetValue	ret_value;
+	Device*		device;
+
+	if (data_manager_ != NULL)
+	{ 
+		if (data_manager_->IsDeviceExist(_properties->id))
+		{
+			INFO(this, "The device[%s] is already registered.", _properties->id.c_str());
+			return	RET_VALUE_OBJECT_EXISTS;
+		}
+	}
+	else
+	{
+		INFO(this, "Data manager is not connected!");
+	
+	}
+
+	device = Device::Create(_properties);
+	if (device == NULL)
+	{
+		ret_value = RET_VALUE_NOT_ENOUGH_MEMORY;	
+		ERROR(this, ret_value, "Failed to create device!");
+		return	ret_value;	
+	}
+
+	if (data_manager_ != NULL)
+	{
+		ret_value = data_manager_->AddDevice(_properties);	
+		if (ret_value != RET_VALUE_OK)
+		{
+			ERROR(this, ret_value, "Failed to add device to data manager!");
+			delete device;
+			return	ret_value;
+		}
+	}
+
+	ret_value = Connect(device);
+	if (ret_value != RET_VALUE_OK)
+	{
+		INFO(this, "Failed to connect deivce!" );
+		data_manager_->DeleteDevice(_properties->id);	
+		delete device;
+		return	ret_value;
+	}
+
+	INFO(this, "The device[%s] was successfully created!", _properties->id.c_str());
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::DestroyDevice
+(
+	const	string&	_id
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+	Device*		device = NULL;
+
+	auto it = device_map_.find(_id);
+	if (it == device_map_.end())
+	{
+		return	RET_VALUE_OBJECT_NOT_FOUND;
+	}
+
+	device = it->second;
+
+	ret_value = data_manager_->DeleteDevice(_id);
+	if (ret_value != RET_VALUE_OK)
+	{
+		ERROR(this, ret_value, "Failed to delete device from data manager!");	
+	}
+
+	device_map_.erase(it);
+
+	delete device;
+
+	return	RET_VALUE_OK;
+}
+
 RetValue	ObjectManager::Connect
 (
 	Device *_device
@@ -114,13 +197,13 @@ RetValue	ObjectManager::Connect
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	map<const string, Device *>::iterator it = device_map_.find(_device->GetID());
+	auto it = device_map_.find(_device->GetID());
 	if (it == device_map_.end())
 	{
-		TRACE(this, "The device[%s] was connected", _device->GetID().c_str());
+		INFO(this, "The device[%s] was connected.", _device->GetID().c_str());
 		device_map_[_device->GetID()] = _device;
 
-		_device->SetParent(this);
+		_device->object_manager_ = this;
 	}
 
 	return	ret_value;
@@ -157,7 +240,7 @@ Device*		ObjectManager::GetDevice
 {
 	if (_index < device_map_.size())
 	{
-		map<const string, Device *>::iterator it = device_map_.begin();
+		auto it = device_map_.begin();
 		for(; it != device_map_.end() ; it++)
 		{
 			if (_index == 0)
@@ -175,7 +258,7 @@ Device*		ObjectManager::GetDevice
 	const string& _id
 )
 {
-	map<const string, Device *>::iterator it = device_map_.begin();
+	auto it = device_map_.begin();
 	for(; it != device_map_.end() ; it++)
 	{
 		if (it->first == _id)
@@ -194,10 +277,8 @@ RetValue	ObjectManager::LoadDevice
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	TRACE_ENTRY(this);
 	if(_json_node.type() == JSON_ARRAY)
 	{
-		cout << "JSON_ARRAY:: " << endl;
 		for(int i = 0 ; i < (int)_json_node.size() ; i++)
 		{
 			LoadDevice(_json_node[i]);	
@@ -207,7 +288,6 @@ RetValue	ObjectManager::LoadDevice
 	{
 		Device* device = NULL;
 
-		cout << "JSON_NODE:: " << endl;
 		JSONNode::const_iterator it=_json_node.find("type");
 		if (it == _json_node.end())
 		{
@@ -219,9 +299,6 @@ RetValue	ObjectManager::LoadDevice
 			Device::Properties*	properties = Device::Properties::Create(_json_node);
 			if (properties != NULL)
 			{
-				cout << "Device :: " << endl;
-				properties->Show();
-
 				device = Device::Create(properties);
 				if (device != NULL)
 				{
@@ -248,9 +325,75 @@ RetValue	ObjectManager::LoadDevice
 		ERROR(this, ret_value, "Object is not node!");
 	}
 
-	TRACE_EXIT(this);
+	return	ret_value;
+}
+
+RetValue	ObjectManager::SetDeviceName
+(
+	const string& _id,
+	const string& _name
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	Device*		device = GetDevice(_id);
+	if (device == NULL)
+	{
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+		ERROR(this, ret_value, "Failed to set device name!");
+		return	ret_value;
+	}
+
+	ret_value = device->SetName(_name);
+	if (ret_value == RET_VALUE_OK)
+	{
+		ret_value = data_manager_->SetDeviceName(_id, _name);
+	}
+
+	if (ret_value != RET_VALUE_OK)
+	{
+		ERROR(this, ret_value, "Failed to set device name!");	
+	}
 
 	return	ret_value;
+}
+
+RetValue	ObjectManager::SetDeviceEnable
+(
+	const string& _id,
+	bool _enable
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	Device*		device = GetDevice(_id);
+	if (device == NULL)
+	{
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+		ERROR(this, ret_value, "Failed to set device name!");
+		return	ret_value;
+	}
+
+	return	device->SetEnable(_enable);
+}
+
+RetValue	ObjectManager::SetDeviceActivation
+(
+	const string& _id,
+	bool _activation
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	Device*		device = GetDevice(_id);
+	if (device == NULL)
+	{
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+		ERROR(this, ret_value, "Failed to set device name!");
+		return	ret_value;
+	}
+
+	return	device->SetActivation(_activation);
 }
 
 void	ObjectManager::ShowDeviceList()
@@ -261,7 +404,7 @@ void	ObjectManager::ShowDeviceList()
 	size_t	enable_width	= 8;
 	size_t	activation_width	= 11;
 
-	map<const string, Device *>::iterator it = device_map_.begin();
+	auto it = device_map_.begin();
 	for(; it != device_map_.end() ; it++)
 	{
 		if (name_width < it->second->GetName().length())
@@ -314,20 +457,154 @@ void	ObjectManager::ShowDeviceList()
 
 }
 
+RetValue	ObjectManager::SaveDevice
+(
+	Device* _device 
+)
+{
+	return	data_manager_->SetDeviceProperties(_device->GetProperties());
+}
+
 ////////////////////////////////////////////////////////////////
 //	for Endpoint
 ////////////////////////////////////////////////////////////////
+RetValue	ObjectManager::CreateEndpoint
+(
+	Endpoint::Properties *_properties
+)
+{
+	RetValue	ret_value;
+	Device*		device;
+	Endpoint*	endpoint;
+
+	if (data_manager_ != NULL)
+	{ 
+		if (data_manager_->IsEndpointExist(_properties->id))
+		{
+			ret_value = RET_VALUE_OBJECT_EXISTS;
+			ERROR(this, ret_value, "Endpoint[%s] already exist.", _properties->id.c_str());
+			return	ret_value;
+		}
+
+		if (!data_manager_->IsDeviceExist(_properties->device_id))
+		{
+			ret_value = RET_VALUE_DEVICE_DOES_NOT_EXIST;
+			ERROR(this, ret_value, "Device[%s] does not exist.", _properties->device_id.c_str());
+			return	ret_value;
+		}
+	}
+
+	device = GetDevice(_properties->device_id);
+	if (device == NULL)
+	{
+		ret_value= RET_VALUE_DEVICE_DOES_NOT_EXIST;
+		ERROR(this, ret_value, "Device[%s] does not exist.", _properties->device_id.c_str());
+		return	RET_VALUE_DEVICE_DOES_NOT_EXIST;
+	}
+
+	endpoint = Endpoint::Create(_properties);
+	if (endpoint == NULL)
+	{
+		ret_value = RET_VALUE_NOT_ENOUGH_MEMORY;	
+		ERROR(this, ret_value, "Failed to creat endpoint.");
+		return	ret_value;	
+	}
+
+	if (data_manager_ != NULL)
+	{
+		ret_value = data_manager_->AddEndpoint(_properties);	
+		if (ret_value != RET_VALUE_OK)
+		{
+			ERROR(this, ret_value, "Failed to add endpoint to data manager!");
+			delete endpoint;
+			return	ret_value;
+		}
+	}
+
+	ret_value = Connect(endpoint);
+	if (ret_value != RET_VALUE_OK)
+	{
+		INFO(this, "Failed to connect endpoint!" );
+		data_manager_->DeleteEndpoint(_properties->id);	
+		delete endpoint;
+		return	ret_value;
+	}
+
+	INFO(this, "The endpoin[%s] was successfully created!", _properties->id.c_str());
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::DestroyEndpoint
+(
+	const	string&	_id
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+	Endpoint*	endpoint = NULL;
+
+	auto it = endpoint_map_.find(_id);
+	if (it == endpoint_map_.end())
+	{
+		return	RET_VALUE_OBJECT_NOT_FOUND;
+	}
+
+	endpoint = it->second;
+
+	ret_value = data_manager_->DeleteEndpoint(_id);
+	if (ret_value != RET_VALUE_OK)
+	{
+		ERROR(this, ret_value, "Failed to delete endpoint from data manager!");	
+	}
+
+	endpoint_map_.erase(it);
+
+	delete endpoint;
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	ObjectManager::Connect
+(
+	Endpoint *_endpoint
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	auto it = endpoint_map_.find(_endpoint->GetID());
+	if (it == endpoint_map_.end())
+	{
+		INFO(this, "The endpoint[%s] was connected.", _endpoint->GetID().c_str());
+		endpoint_map_[_endpoint->GetID()] = _endpoint;
+
+		_endpoint->object_manager_ = this;
+	}
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::Disconnect
+(
+	Endpoint*	_endpoint
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (endpoint_map_.erase(_endpoint->GetID()) != 0)
+	{
+		_endpoint->ReleaseParent();
+	}
+	else
+	{
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+	}
+
+	return	ret_value;
+}
+
 uint32		ObjectManager::GetEndpointCount()
 {
-	uint32	endpoint_count = 0;
-
-	map<const string, Device *>::iterator it = device_map_.begin();
-	for(; it != device_map_.end() ; it++)
-	{
-		endpoint_count += it->second->GetEndpointCount();
-	}		
-
-	return	endpoint_count;
+	return	endpoint_map_.size();
 }
 
 Endpoint*		ObjectManager::GetEndpoint
@@ -335,17 +612,12 @@ Endpoint*		ObjectManager::GetEndpoint
 	uint32 _index
 )
 {
-	map<const string, Device *>::iterator it = device_map_.begin();
-	for(; it != device_map_.end() ; it++, _index--)
+	auto it = endpoint_map_.begin();
+	for(; it != endpoint_map_.end() ; _index--, it++)
 	{
-		if (_index > it->second->GetEndpointCount())
+		if (_index == 0)
 		{
-			_index -= it->second->GetEndpointCount();
-		}
-		else
-		{
-			return	it->second->GetEndpoint(_index);
-		
+			return	it->second;
 		}
 	}		
 
@@ -357,17 +629,73 @@ Endpoint*		ObjectManager::GetEndpoint
 	const string& _id
 )
 {
-	map<const string, Device *>::iterator it = device_map_.begin();
-	for(; it != device_map_.end() ; it++)
+	auto it = endpoint_map_.find(_id);
+	if (it != endpoint_map_.end())
 	{
-		Endpoint* endpoint = it->second->GetEndpoint(_id);
-		if (endpoint != NULL)
-		{
-			return	endpoint;	
-		}
+		return	it->second;
 	}		
 
 	return	NULL;
+}
+
+RetValue	ObjectManager::LoadEndpoint
+(
+	const	JSONNode& _json_node
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if(_json_node.type() == JSON_ARRAY)
+	{
+		for(int i = 0 ; i < (int)_json_node.size() ; i++)
+		{
+			LoadEndpoint(_json_node[i]);	
+		}
+	}
+	else if (_json_node.type() == JSON_NODE)
+	{
+		Endpoint* endpoint = NULL;
+
+		JSONNode::const_iterator it=_json_node.find("type");
+		if (it == _json_node.end())
+		{
+			ret_value = RET_VALUE_INVALID_TYPE;
+			ERROR(this, RET_VALUE_INVALID_TYPE, "type not found!");
+		}
+		else
+		{
+			Endpoint::Type	type = (Endpoint::Type)it->as_int();
+			Endpoint::Properties*	properties = Endpoint::Properties::Create(type);
+			if (properties != NULL)
+			{
+				properties->Set(_json_node);
+
+
+				ret_value = CreateEndpoint(properties);
+				if (ret_value != RET_VALUE_OK)
+				{
+					ERROR(this, ret_value, "Failed to create endpoint!");	
+					delete properties;
+				}
+			}
+
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_TYPE;
+		ERROR(this, ret_value, "Object is not node!");
+	}
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::SaveEndpoint
+(
+	Endpoint* _endpoint
+)
+{
+	return	data_manager_->SetEndpointProperties(_endpoint->GetProperties());
 }
 
 ///////////////////////////////////////////////////////
@@ -378,11 +706,87 @@ RetValue	ObjectManager::Connect
 	DataManager*	_data_manager
 )
 {
-	if (data_manager_ != _data_manager)
+	if (data_manager_ == _data_manager)
 	{
-		data_manager_ = _data_manager;
+		return	RET_VALUE_OK;
 	}
 
+	data_manager_ = _data_manager;
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	ObjectManager::LoadFromDataManager()
+{
+	uint32_t	device_count = data_manager_->GetDeviceCount();
+	if (device_count == 0)
+	{
+		return	RET_VALUE_OK;
+	}
+
+	std::list<Device::Properties*>	device_list;
+
+	RetValue ret_value = data_manager_->GetDeviceProperties(0, device_count, device_list);
+	if (ret_value != RET_VALUE_OK)
+	{
+		return	ret_value;	
+	}
+
+	std::list<Device::Properties*>::iterator device_it = device_list.begin();
+	while(device_it != device_list.end())
+	{
+		Device*	device = Device::Create(*device_it);
+		if (device != NULL)
+		{
+			INFO(this, "The device has been created.");
+			ret_value = Connect(device);
+			if (ret_value != RET_VALUE_OK)
+			{
+				ERROR(this, ret_value, "Failed to connect device to manager!");
+
+				delete device;
+			}
+		}
+
+		device_it++;
+	}
+
+	INFO(this, "Device loading completed");
+	uint32_t	endpoint_count = data_manager_->GetEndpointCount();
+	if (endpoint_count == 0)
+	{
+		return	RET_VALUE_OK;
+	}
+
+	std::list<Endpoint::Properties*>	endpoint_list;
+
+	ret_value = data_manager_->GetEndpointProperties(0, endpoint_count, endpoint_list);
+	if (ret_value != RET_VALUE_OK)
+	{
+		return	ret_value;	
+	}
+
+	std::list<Endpoint::Properties*>::iterator endpoint_it = endpoint_list.begin();
+	while(endpoint_it != endpoint_list.end())
+	{
+		Endpoint*	endpoint = Endpoint::Create(*endpoint_it);
+		if (endpoint != NULL)
+		{
+			ret_value = Connect(endpoint);
+			if (ret_value != RET_VALUE_OK)
+			{
+				ERROR(this, ret_value, "Failed to connect endpoint to manager!");
+
+				delete endpoint;
+			}
+		}
+
+		endpoint_it++;
+	}
+	INFO(this, "Endpoint loading completed");
+
+
+	INFO(this, "Object loading completed");
 	return	RET_VALUE_OK;
 }
 
@@ -409,27 +813,43 @@ void	ObjectManager::OnMessage
 	Message* _message
 )
 {
-	TRACE(this, "Message[%s] Received", ToString(_message).c_str());
+	INFO(this, "Message[%s] recieved.", ToString(_message).c_str());
 	switch(_message->type)
 	{
 	case	Message::TYPE_STARTED:
 		{
 			if (_message->id == string(""))
 			{
-				map<const string, Device *>::iterator	it = device_map_.begin();
+				auto it = device_map_.begin();
 				for(; it != device_map_.end(); it++)
 				{
 					it->second->Start();
-					TRACE(this, "Device[%s] started", it->second->GetID().c_str());
+				}
+
+				auto endpoint_it = endpoint_map_.begin();
+				for(; endpoint_it != endpoint_map_.end(); endpoint_it++)
+				{
+					INFO(this, "Endpoint[%s] : Device[%s]", endpoint_it->second->GetID().c_str(), endpoint_it->second->GetDeviceID().c_str());
+
+					endpoint_it->second->Activation();
 				}
 			}
 			else
 			{
-				map<const string, Device *>::iterator	it = device_map_.find(((MessageStart *)_message)->id);
+				auto it = device_map_.find(((MessageStart *)_message)->id);
 				if (it != device_map_.end())
 				{
 					it->second->Start();
-					TRACE(this, "Device[%s] started", it->second->GetID().c_str());
+					INFO(this, "Device[%s] started.", it->second->GetID().c_str());
+
+					auto endpoint_it = endpoint_map_.begin();
+					for(; endpoint_it != endpoint_map_.end(); endpoint_it++)
+					{
+						if (endpoint_it->second->GetDeviceID() == ((MessageStart *)_message)->id)
+						{
+							endpoint_it->second->Activation();
+						}
+					}
 				}
 			}
 		}
@@ -439,20 +859,34 @@ void	ObjectManager::OnMessage
 		{
 			if (_message->id == string(""))
 			{
-				map<const string, Device *>::iterator	it = device_map_.begin();
+				auto it = device_map_.begin();
 				for(; it != device_map_.end(); it++)
 				{
-					TRACE(this, "Device[%s] stop", it->second->GetID().c_str());
 					it->second->Stop();
+				}
+
+				auto endpoint_it = endpoint_map_.begin();
+				for(; endpoint_it != endpoint_map_.end(); endpoint_it++)
+				{
+					endpoint_it->second->Deactivation();
 				}
 			}
 			else
 			{
-				map<const string, Device *>::iterator	it = device_map_.find(((MessageStart *)_message)->id);
+				auto it = device_map_.find(((MessageStart *)_message)->id);
 				if (it != device_map_.end())
 				{
-					TRACE(this, "Device[%s] stop", it->second->GetID().c_str());
+					INFO(this, "Device[%s] stopped.", it->second->GetID().c_str());
 					it->second->Stop();
+
+					auto endpoint_it = endpoint_map_.begin();
+					for(; endpoint_it != endpoint_map_.end(); endpoint_it++)
+					{
+						if (endpoint_it->second->GetDeviceID() == ((MessageStart *)_message)->id)
+						{
+							endpoint_it->second->Deactivation();
+						}
+					}
 				}
 			}
 		}
@@ -471,7 +905,7 @@ void	ObjectManager::OnQuit
 )
 {
 	
-	map<const string, Device *>::iterator device_it = device_map_.begin();
+	auto device_it = device_map_.begin();
 	for(; device_it != device_map_.end() ; device_it++)
 	{
 		device_it->second->Stop();
@@ -558,14 +992,7 @@ void	ObjectManager::ShowEndpointList()
 		}
 
 
-		if (endpoint->GetParent() != NULL)
-		{
-			cout << " " << setw(device_id_width) << ((Device *)endpoint->GetParent())->GetID();
-		}
-		else
-		{
-			cout << " " << setw(device_id_width) << setfill(' ') << "";
-		}
+		cout << " " << setw(device_id_width) << endpoint->GetDeviceID();
 
 		TimedValue value = endpoint->GetValue();
 		buffer << value.ToString() << "[" << value.GetTime().ToString() << "]";

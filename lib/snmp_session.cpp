@@ -8,7 +8,7 @@
 
 using namespace std;
 
-static SNMPClient	snmp_client_;
+static SNMPClient*	snmp_client_ = NULL;
 
 SNMPSession::SNMPSession()
 {
@@ -17,7 +17,11 @@ SNMPSession::SNMPSession()
 	timeout_ 	= 1000;
 	sess_handle_= NULL;
 
-	snmp_client_.Append(this);
+	if (snmp_client_ == NULL)
+	{
+		snmp_client_ = new SNMPClient;
+	}
+	snmp_client_->Append(this);
 }
 
 SNMPSession::SNMPSession
@@ -30,14 +34,14 @@ SNMPSession::SNMPSession
 	timeout_ 	= 1000;
 	sess_handle_= NULL;
 
-	snmp_client_.Append(this);
+	snmp_client_->Append(this);
 }
 
 SNMPSession::~SNMPSession()
 {
 	Close();
 
-	snmp_client_.Remove(this);
+	snmp_client_->Remove(this);
 }
 
 RetValue	SNMPSession::Open()
@@ -70,7 +74,7 @@ RetValue	SNMPSession::Open()
 		}
 		else
 		{
-			TRACE(this, "The SNMP session[%s:%s] opened.", peer_.c_str(), community_.c_str());
+			INFO(this, "The SNMP session[%s:%s] opened." , peer_.c_str(), community_.c_str());
 		}
 	}
 
@@ -132,7 +136,7 @@ RetValue	SNMPSession::Get(SNMPObject* _object)
 			else
 			{
 				ret_value = RET_VALUE_SNMP_RESPONSE_ERROR;
-				ERROR(this, ret_value, "");
+				ERROR(this, ret_value, "Failed to receive SNMP response!");
 			}
 
 			if (response_pdu != NULL)

@@ -7,6 +7,7 @@
 using namespace std;
 
 MessageProcess::MessageProcess()
+: Object()
 {
 	thread_ = NULL;
 	stop_	= true;
@@ -87,7 +88,7 @@ void	MessageProcess::OnMessage
 	Message* _message
 )
 {
-	TRACE(this, "Message[%s] Received.", ToString(_message).c_str());
+	INFO(this, "Message[%s] received.", ToString(_message).c_str());
 	switch(_message->type)
 	{
 	case	Message::TYPE_QUIT:
@@ -98,7 +99,7 @@ void	MessageProcess::OnMessage
 
 	default:			
 		{
-			TRACE(this, "Unknown message[%s]!", ToString(_message).c_str());
+			INFO(this, "Unknown message[%s].", ToString(_message).c_str());
 		}
 	}
 }
@@ -124,7 +125,7 @@ void MessageProcess::Thread
 	MessageProcess* _mp
 )
 {
-	TRACE(_mp, "%s started.", _mp->ClassName().c_str());
+	INFO(NULL, "%s started.", _mp->ClassName().c_str());
 
 	_mp->PreProcess();
 

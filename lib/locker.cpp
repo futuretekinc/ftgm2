@@ -1,11 +1,11 @@
-#include "mutex.h"
+#include "locker.h"
 
-Mutex::Mutex()
+Locker::Locker()
 {
 	locked_ = false;
 }
 
-bool	Mutex::Lock()
+bool	Locker::Lock()
 {
 	mutex_.lock();
 
@@ -14,7 +14,7 @@ bool	Mutex::Lock()
 	return	true;
 }
 
-bool	Mutex::Unlock()
+bool	Locker::Unlock()
 {
 	mutex_.unlock();
 
@@ -23,7 +23,7 @@ bool	Mutex::Unlock()
 	return	true;
 }
 
-bool	Mutex::IsLocked()
+bool	Locker::IsLocked()
 {
 	return	locked_;
 }

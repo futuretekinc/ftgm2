@@ -22,16 +22,23 @@ public:
 
 
 	RetValue	CreateDeviceTable();
-	RetValue	AddDevice(Device* _device);
-	bool		IsDeviceExist(Device* _device);
-	RetValue	GetDeviceCount(uint32_t& _count);
+	RetValue	AddDevice(Device::Properties* _properties);
+	RetValue	DeleteDevice(const std::string& _id);
+	bool		IsDeviceExist(const std::string& _id);
+	uint32_t	GetDeviceCount();
 	RetValue	GetDeviceProperties(uint32_t _index, uint32_t _count, std::list<Device::Properties*>& _list);
+	RetValue	SetDeviceProperties(Device::Properties *_properties);
+
+	RetValue	SetDeviceName(const std::string& _id, const std::string &_name);
+	RetValue	SetDeviceEnable(const std::string& _id, bool enable);
 
 	RetValue	CreateEndpointTable();
-	RetValue	AddEndpoint(Endpoint* _endpoint);
-	bool		IsEndpointExist(Endpoint* _endpoint);
-	RetValue	GetEndpointCount(uint32_t& _count);
+	RetValue	AddEndpoint(Endpoint::Properties* _properties);
+	RetValue	DeleteEndpoint(const std::string& _id);
+	bool		IsEndpointExist(const std::string& _id);
+	uint32_t	GetEndpointCount();
 	RetValue	GetEndpointProperties(uint32_t _index, uint32_t _count, std::list<Endpoint::Properties*>& _list);
+	RetValue	SetEndpointProperties(Endpoint::Properties* _properties);
 
 	RetValue	CreateValueTable(const std::string& _id);
 	RetValue	AddValue(const std::string& _id, TimedValue* _value_list, uint32_t _count);

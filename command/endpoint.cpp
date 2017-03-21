@@ -1,9 +1,11 @@
 #include <iostream>
 #include <iomanip>
 #include "shell.h"
+#include "shell_command.h"
 #include "object_manager.h"
 #include "data_manager.h"
 #include "device.h"
+#include "string_utils.h"
 
 using namespace std;
 
@@ -30,98 +32,99 @@ RetValue	ShellCommandEndpoint
 		}
 		else if (IsCorrectOption(_arguments[1],"create"))
 		{
-#if 0
 			Endpoint::Type	type = Endpoint::StringToType(_arguments[2]);
-			if (type == Endpoint::TYPE_UNKNOWN)
+			if (type == Endpoint::UNKNOWN)
 			{
 				_shell->Out() << "Failed to create endpoint[" << _arguments[2] <<"]!" << endl;
 			}
 			else
 			{
-				uint32_t	index;
+				Device*		device;
 
-				Endpoint::Properties	*properties = Endpoint::Properties::Create(type);
-				if (properties == NULL)
+				device = object_manager->GetDevice(_arguments[3]);
+				if (device != NULL)
 				{
-					ret_value = RET_VALUE_INVALID_ARGUMENTS;	
+					Endpoint::Properties	*properties = Endpoint::Properties::Create(type);
+					if (properties == NULL)
+					{
+						ret_value = RET_VALUE_INVALID_ARGUMENTS;	
+					}
+					else
+					{
+						properties->device_id = _arguments[3];
+						uint32_t	index = 4;
+						while(index < _count)
+						{
+							if (caseInsCompare(_arguments[index].c_str(), "--id"))
+							{
+								if(index+1 < _count)
+								{
+									properties->id = _arguments[index+1];	
+								}
+								else
+								{
+									ret_value = RET_VALUE_INVALID_ARGUMENTS;
+									break;	
+								}
+
+								index += 2;
+							}
+							else if (caseInsCompare(_arguments[index].c_str(), "--name"))
+							{
+								if(index+1 < _count)
+								{
+									properties->name = _arguments[index+1];	
+								}
+								else
+								{
+									ret_value = RET_VALUE_INVALID_ARGUMENTS;
+									break;	
+								}
+
+								index += 2;
+							}
+							else if (caseInsCompare(_arguments[index].c_str(), "--index"))
+							{
+								if(index+1 < _count)
+								{
+									properties->index = atoi(_arguments[index+1].c_str());
+								}
+								else
+								{
+									ret_value = RET_VALUE_INVALID_ARGUMENTS;
+									break;	
+								}
+
+								index += 2;
+							}
+							else
+							{
+								ret_value = RET_VALUE_INVALID_ARGUMENTS;
+								break;	
+							}
+						}
+
+						if (ret_value == RET_VALUE_OK)
+						{
+							ret_value = object_manager->CreateEndpoint(properties);
+							if (ret_value != RET_VALUE_OK)
+							{
+								_shell->Out() << "Failed to create endpoint[" << _arguments[2] <<"]!" << endl;
+							}
+							else
+							{
+								_shell->Out() << "The endpoint[" << _arguments[2] << "] was succefully created." << endl;
+							}
+						}
+
+						delete properties;
+					}
 				}
 				else
 				{
-					while(index < _count)
-					{
-						if (strcasecmp(_arguments[index].c_str(), "--id") == 0)
-						{
-							if(index+1 < _count)
-							{
-								properties->id = _arguments[index+1];	
-							}
-							else
-							{
-								ret_value = RET_VALUE_INVALID_ARGUMENTS;
-								break;	
-							}
-
-							index += 2;
-						}
-						else if (strcasecmp(_arguments[index].c_str(), "--name") == 0)
-						{
-							if(index+1 < _count)
-							{
-								properties->name = _arguments[index+1];	
-							}
-							else
-							{
-								ret_value = RET_VALUE_INVALID_ARGUMENTS;
-								break;	
-							}
-
-							index += 2;
-						}
-						else if (strcasecmp(_arguments[index].c_str(), "--index") == 0)
-						{
-							if(index+1 < _count)
-							{
-								properties->index = atoi(_arguments[index+1].c_str());
-							}
-							else
-							{
-								ret_value = RET_VALUE_INVALID_ARGUMENTS;
-								break;	
-							}
-
-							index += 2;
-						}
-						else
-						{
-							ret_value = RET_VALUE_INVALID_ARGUMENTS;
-							break;	
-						}
-					}
-
-					if (ret_value == RET_VALUE_OK)
-					{
-						Endpoint*	endpoint = Endpoint::Create(properties);
-						if (endpoint == NULL)
-						{
-							_shell->Out() << "Failed to create endpoint[" << _arguments[2] <<"]!" << endl;
-						}
-						else
-						{
-							_shell->Out() << "The endpoint[" << _arguments[2] << "] was succefully created." << endl;
-							ret_value = object_manager->Connect(endpoint);
-							if (ret_value != RET_VALUE_OK)
-							{
-								_shell->Out() << "Failed to attach endpoint[" << _arguments[2] << "] at object manager!" << endl;
-								delete endpoint;
-
-							}
-						}
-					}
-
-					delete properties;
+					_shell->Out() << "Unknown device : " << _arguments[3] << endl;	
 				}
 			}
-#endif
 		}
 		else if (IsCorrectOption(_arguments[1], "delete"))
 		{
@@ -129,25 +132,14 @@ RetValue	ShellCommandEndpoint
 
 			for(index = 2; index < _count ; index++)
 			{
-				Endpoint*	endpoint = object_manager->GetEndpoint(_arguments[index]);
-				if (endpoint == NULL)
+				ret_value = object_manager->DestroyEndpoint(_arguments[index]);
+				if (ret_value == RET_VALUE_OK)
 				{
-					_shell->Out() << "Failed to get endpoint[" << _arguments[index] << "]." << endl;
+					_shell->Out() << "The endpoint[" << _arguments[index] << "] was detached." << endl;
 				}
 				else
 				{
-#if 0
-					ret_value = object_manager->Disconnect(endpoint);
-					if (ret_value == RET_VALUE_OK)
-					{
-						delete endpoint;
-						_shell->Out() << "The endpoint[" << _arguments[index] << "] was detached." << endl;
-					}
-					else
-					{
-						_shell->Out() << "Failed to detach the endpoint[" << _arguments[index] << "]." << endl;
-					}
-#endif
+					_shell->Out() << "Failed to detach the endpoint[" << _arguments[index] << "]." << endl;
 				}
 			}
 		}
@@ -159,10 +151,10 @@ RetValue	ShellCommandEndpoint
 			}
 			else
 			{
+				
 				if (IsCorrectOption(_arguments[2], "all"))
 				{
-#if 0
-					for(uint32 i = 0 ; i < object_manager->EndpointCount() ; i++)
+					for(uint32 i = 0 ; i < object_manager->GetEndpointCount() ; i++)
 					{
 						Endpoint*	endpoint = object_manager->GetEndpoint(i);
 						if (endpoint != NULL)
@@ -183,12 +175,82 @@ RetValue	ShellCommandEndpoint
 						}
 					
 					}
-#endif
+				}
+				else
+				{
+					Endpoint *endpoint = object_manager->GetEndpoint(_arguments[2]);
+					if (endpoint == NULL)
+					{
+						cout << "Error : Failed to get endpoint[" << _arguments[2] << "]." << endl;
+					}
+					else
+					{
+						ret_value = endpoint->Activation();
+						if (ret_value == RET_VALUE_OK)
+						{
+							cout << "The endpoint[" << _arguments[2] << "] was activated.";
+						}
+						else
+						{
+							cout << "The endpoint[" << _arguments[2] << "] can't activate. - [Ret: " << ret_value << "]";
+						}
+					}
 				}
 			}
 		}
 		else if (IsCorrectOption(_arguments[1], "deactivate"))
 		{
+			if (_count == 2)
+			{
+				ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			}
+			else
+			{
+				if (IsCorrectOption(_arguments[2], "all"))
+				{
+					for(uint32 i = 0 ; i < object_manager->GetEndpointCount() ; i++)
+					{
+						Endpoint*	endpoint = object_manager->GetEndpoint(i);
+						if (endpoint != NULL)
+						{
+							ret_value = endpoint->Deactivation();	
+							if (ret_value == RET_VALUE_OK)
+							{
+								cout << "The endpoint[" << _arguments[2] << "] was deactivated.";
+							}
+							else
+							{
+								cout << "The endpoint[" << _arguments[2] << "] can't deactivate. - [Ret: " << ret_value << "]";
+							}
+						}
+						else
+						{
+							cout << i << "th endpoint not exist!" << endl;
+						}
+					
+					}
+				}
+				else
+				{
+					Endpoint *endpoint = object_manager->GetEndpoint(_arguments[2]);
+					if (endpoint == NULL)
+					{
+						cout << "Error : Failed to get endpoint[" << _arguments[2] << "]." << endl;
+					}
+					else
+					{
+						ret_value = endpoint->Deactivation();
+						if (ret_value == RET_VALUE_OK)
+						{
+							cout << "The endpoint[" << _arguments[2] << "] was deactivated.";
+						}
+						else
+						{
+							cout << "The endpoint[" << _arguments[2] << "] can't deactivate. - [Ret: " << ret_value << "]";
+						}
+					}
+				}
+			}
 		}
 		else 
 		{
@@ -297,4 +359,28 @@ RetValue	ShellCommandEndpoint
 
 	return	ret_value;
 }
+
+ShellCommand<ObjectManager>	object_manager_command_endpoint =
+{
+	.name		= "endpoint",
+	.help		= "<command>\n"
+				"\tManagement of endpoint.\n"
+				"COMMANDS:\n"
+				"\tcreate <TYPE> <DEVICE_ID> [OPTIONS]\n"
+				"OPTIONS:\n"
+				"\t--id <ID>\n"
+				"\t\tUnique identifier\n"
+				"\t--name <NAME>\n"
+				"\t\tName\n"
+				"PARAMETERS:\n"
+				"\tTYPE\tEndpoint type.\n"
+				"\t\ttemperature\n"
+				"\t\thumidity\n"
+				"\t\tvoltage\n"
+				"\tDEVICE_ID\tThe ID of the device to which the endpoint belongs.\n"
+				"\tID\tUnique identifier of the endpoint.\n"
+				"\tNAME\tName of the endpoint.\n",
+	.short_help	= "Management of endpoint.",
+	.function	= ShellCommandEndpoint
+};
 

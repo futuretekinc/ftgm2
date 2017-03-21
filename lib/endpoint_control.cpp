@@ -22,9 +22,8 @@ EndpointControl::Properties::Properties
 (
 	const JSONNode& _node
 ) 
-: Endpoint::Properties(_node) 
 {
-	type = TYPE_CONTROL;
+	Set(_node);
 }
 
 
@@ -66,8 +65,8 @@ EndpointControl::EndpointControl
 :	Endpoint(_properties)
 {
 	value_	= 0;
-	max_value_	= _properties.max_value;
-	min_value_	= _properties.min_value;
+	max_value_	= _properties.options.max_value;
+	min_value_	= _properties.options.min_value;
 }
 
 EndpointControl::EndpointControl
@@ -77,8 +76,8 @@ EndpointControl::EndpointControl
 :	Endpoint(_properties)
 {
 	value_	= 0;
-	max_value_	= _properties->max_value;
-	min_value_	= _properties->min_value;
+	max_value_	= _properties->options.max_value;
+	min_value_	= _properties->options.min_value;
 }
 
 EndpointControl::~EndpointControl()

@@ -1,10 +1,13 @@
 #include <iostream>
+#include <iomanip>
 #include "object_manager.h"
 #include "device.h"
 #include "endpoint.h"
 #include "trace.h"
+#include "KompexSQLiteException.h"
 
 using namespace std;
+
 
 struct	EndpointTypeInfo
 {
@@ -12,12 +15,13 @@ struct	EndpointTypeInfo
 	const string name;
 }	kEndpointTypeInfoList[] = 
 {
-	{ Endpoint::TYPE_SENSOR_TEMPERATURE, 		"temperature"	},
-	{ Endpoint::TYPE_SENSOR_HUMIDITY, 			"humidity"	},
-	{ Endpoint::TYPE_SENSOR_VOLTAGE, 			"voltage"	},
-	{ Endpoint::TYPE_CONTROL_DIGITAL_OUTPUT,	"digital_output"		},
-	{ Endpoint::TYPE_CONTROL_DIGITAL_OUTPUT,	"do"		},
-	{ Endpoint::TYPE_UNKNOWN, 	""		}
+	{ Endpoint::TEMPERATURE_SENSOR, 		"temperature"	},
+	{ Endpoint::HUMIDITY_SENSOR, 			"humidity"	},
+	{ Endpoint::VOLTAGE_SENSOR, 			"voltage"	},
+	{ Endpoint::CURRENT_SENSOR, 			"Current"	},
+	{ Endpoint::DO_CONTROL,	"digital_output"		},
+	{ Endpoint::DO_CONTROL,	"do"		},
+	{ Endpoint::UNKNOWN, 	""		}
 };
 
 Endpoint::Properties::Properties
@@ -30,6 +34,7 @@ Endpoint::Properties::Properties
 	id 		= _properties.id;
 	name 	= _properties.name;
 	enable 	= _properties.enable;
+	device_id=_properties.device_id;
 	update_interval = _properties.update_interval;
 	value_count 	= _properties.value_count;
 }
@@ -44,47 +49,70 @@ Endpoint::Properties::Properties
 	id 		= _properties->id;
 	name 	= _properties->name;
 	enable 	= _properties->enable;
+	device_id=_properties->device_id;
 	update_interval = _properties->update_interval;
 	value_count 	= _properties->value_count;
 }
 
 Endpoint::Properties::Properties
 (
-	Type _type,
-	uint32_t _index
+	Type _type
 ) 
-: type(_type), index(_index) 
+: type(_type)
 {
-	id = "";
+	ostringstream	buffer;
+	Time			time = Time::GetCurrentTime();
+
+	buffer << time.Milliseconds();
+
+	id		=	"ep-" + buffer.str();
+	index = 0;
 	name = "";
 	enable = false;
+	device_id="";
 	update_interval = 1000;
 	value_count = 100;
-}
-
-Endpoint::Properties::Properties
-(
-	const JSONNode& _node
-)
-{
-	type 	= TYPE_UNKNOWN;
-	index	= 0;
-	id 		= "";
-	name 	= "";
-	enable	= false;
-	update_interval = 1000;
-	value_count = 100;
-
-	Set(_node);
 }
 
 Endpoint::Properties::~Properties()
 {
 }
 
-Endpoint::Properties*	Endpoint::Properties::Duplicate()
+Endpoint::Properties*	Endpoint::Properties::Create
+(
+	Type _type
+)
 {
-	return	new Properties(this);
+	switch(_type)
+	{
+	case	TEMPERATURE_SENSOR:	return	new	EndpointSensorTemperature::Properties;
+	case	HUMIDITY_SENSOR:	return	new EndpointSensorHumidity::Properties;
+	case	VOLTAGE_SENSOR: 	return	new EndpointSensorVoltage::Properties;
+	case	DO_CONTROL:			return	new EndpointControlDigitalOutput::Properties;
+	default	:
+		return	NULL;
+	}
+}
+
+Endpoint::Properties*	Endpoint::Properties::Create
+(
+	const Properties* _properties
+)
+{
+	Properties*	new_properties = Create(_properties->type);
+
+	if (new_properties != NULL)
+	{
+		new_properties->index = _properties->index;
+		new_properties->id = _properties->id;
+		new_properties->name = _properties->name;
+		new_properties->device_id = _properties->device_id;
+		new_properties->enable = _properties->enable;
+		new_properties->update_interval = _properties->update_interval;
+		new_properties->value_count = _properties->value_count;
+	}
+
+	return	new_properties;
 }
 
 Endpoint::Properties*	Endpoint::Properties::Create
@@ -92,7 +120,7 @@ Endpoint::Properties*	Endpoint::Properties::Create
 	const JSONNode& _node
 )
 {
-	Endpoint::Type	type = TYPE_UNKNOWN;
+	Endpoint::Type	type = UNKNOWN;
 
 	if (_node.type() != JSON_NODE)
 	{
@@ -110,29 +138,29 @@ Endpoint::Properties*	Endpoint::Properties::Create
 
 	switch(type)
 	{
-	case	TYPE_SENSOR_TEMPERATURE:		return	new	EndpointSensorTemperature::Properties(_node);
-	case	TYPE_SENSOR_HUMIDITY:			return	new EndpointSensorHumidity::Properties(_node);
-	case	TYPE_SENSOR_VOLTAGE: 			return	new EndpointSensorVoltage::Properties(_node);
-	case	TYPE_CONTROL_DIGITAL_OUTPUT:	return	new EndpointControlDigitalOutput::Properties(_node);
+	case	TEMPERATURE_SENSOR:	return	new	EndpointSensorTemperature::Properties(_node);
+	case	HUMIDITY_SENSOR:	return	new EndpointSensorHumidity::Properties(_node);
+	case	VOLTAGE_SENSOR: 	return	new EndpointSensorVoltage::Properties(_node);
+	case	DO_CONTROL:			return	new EndpointControlDigitalOutput::Properties(_node);
 	default	:
 		return	NULL;
 	}
 }
 
-Endpoint::Properties*	Endpoint::Properties::Create
+RetValue Endpoint::Properties::Set
 (
-	Type	_type
+	const Properties* _properties
 )
 {
-	switch(_type)
-	{
-	case	TYPE_SENSOR_TEMPERATURE:		return	new	EndpointSensorTemperature::Properties();
-	case	TYPE_SENSOR_HUMIDITY:			return	new EndpointSensorHumidity::Properties();
-	case	TYPE_SENSOR_VOLTAGE: 			return	new EndpointSensorVoltage::Properties();
-	case	TYPE_CONTROL_DIGITAL_OUTPUT:	return	new EndpointControlDigitalOutput::Properties();
-	default	:
-		return	NULL;
-	}
+	index	= _properties->index;
+	id 		= _properties->id;
+	name 	= _properties->name;
+	enable 	= _properties->enable;
+	device_id=_properties->device_id;
+	update_interval = _properties->update_interval;
+	value_count 	= _properties->value_count;
+
+	return	RET_VALUE_OK;
 }
 
 RetValue Endpoint::Properties::Set
@@ -178,6 +206,17 @@ RetValue Endpoint::Properties::Set
 			if (_node.type() == JSON_STRING)
 			{
 				id = _node.as_string();
+			}
+			else
+			{
+				ret_value = RET_VALUE_INVALID_FIELD;
+			}
+		}
+		else if (strcasecmp(_node.name().c_str(), "device_id") == 0)
+		{
+			if (_node.type() == JSON_STRING)
+			{
+				device_id = _node.as_string();
 			}
 			else
 			{
@@ -245,6 +284,43 @@ RetValue Endpoint::Properties::Set
 	return	ret_value;
 }
 
+RetValue	Endpoint::Properties::Set
+(
+	const Kompex::SQLiteStatement*	_statement
+)
+{
+	ASSERT(_statement != NULL);
+
+	RetValue	ret_value = RET_VALUE_OK;
+
+	try
+	{	
+		index 			= _statement->GetColumnInt("_index");
+		enable 			= _statement->GetColumnInt("_enable");
+		id  			= _statement->GetColumnString("_id");
+		name 			= _statement->GetColumnString("_name");
+		device_id 		= _statement->GetColumnString("_device_id");
+		update_interval	= _statement->GetColumnInt("_update_interval");
+		value_count 	= _statement->GetColumnInt("_value_count");
+	}
+	catch (Kompex::SQLiteException &exception)
+	{
+		ret_value = RET_VALUE_DB_ENTRY_DOES_NOT_EXIST;
+		ERROR(NULL, ret_value, "Database entry does not exist.");
+		return	ret_value;
+	}
+
+	return	ret_value;
+}
+
+uint32	Endpoint::Properties::GetOptions
+(
+	uint8_t *options, 
+	uint32_t options_len
+)
+{
+	return	0;
+}
 
 Endpoint::PropertiesList::~PropertiesList()
 {
@@ -263,33 +339,33 @@ Endpoint::Endpoint
 (
 	Type	_type
 )
-:	properties_(_type, 0)
+:	activation_(false)
 {
-	activation_ = false;
+	properties_ = Properties::Create(_type);
 
-	TRACE(this, "The endpoint[%s] was created.", properties_.id.c_str());
+	INFO(this, "The endpoint[%s] was created.", properties_->id.c_str());
 }
 
 Endpoint::Endpoint
 (	
 	const Properties& _properties
 )
-:	properties_(_properties)
+:	activation_(false)
 {
-	activation_		= false;
+	properties_ = Properties::Create(&_properties);
 
-	TRACE(this, "The endpoint[%s] was created.", properties_.id.c_str());
+	INFO(this, "The endpoint[%s] was created.", properties_->id.c_str());
 }
 
 Endpoint::Endpoint
 (	
 	const Properties* _properties
 )
-:	properties_(*_properties)
+:	activation_(false)
 {
-	activation_		= false;
+	properties_ = Properties::Create(_properties);
 
-	TRACE(this, "The endpoint(%x)[%s] was created.", this, properties_.id.c_str());
+	INFO(this, "The endpoint[%s] was created.", properties_->id.c_str());
 }
 
 Endpoint::Endpoint
@@ -297,51 +373,28 @@ Endpoint::Endpoint
 	Type	_type,
 	string	_id
 )
-:	properties_(_type, 0)
+:	activation_(false)
 {
-	properties_.id 	= _id;
-	properties_.name= _id;
-
-	activation_	= false;
-
-	TRACE(this, "The endpoint[%s] was created.", properties_.id.c_str());
+	properties_ = Properties::Create(_type);
+	properties_->id = _id;
+	properties_->name = _id;
+	INFO(this, "The endpoint[%s] was created.", properties_->id.c_str());
 }
 
 Endpoint::~Endpoint()
 {
-	if (parent_ != NULL)
-	{
-		((Device *)parent_)->Disconnect(this);
-	}
-}
-
-Endpoint::Type	Endpoint::GetType()
-{
-	return	properties_.type;	
-}
-
-uint32_t		Endpoint::GetIndex()
-{
-	return	properties_.index;	
+	delete properties_;
 }
 
 const
-std::string&	Endpoint::SetName
+RetValue Endpoint::SetName
 (
 	const std::string& _name
 )	
 {	
-	return	properties_.name = _name; 
-}
+	properties_->name = _name; 
 
-bool		Endpoint::IsEnabled()
-{	
-	return	properties_.enable;	
-}
-
-uint32		Endpoint::UpdateInterval()	
-{	
-	return	properties_.update_interval;
+	return	RET_VALUE_OK;
 }
 
 bool		Endpoint::IsActivated()
@@ -349,23 +402,14 @@ bool		Endpoint::IsActivated()
 	return	activation_;	
 }
 
-uint32_t	Endpoint::MaxValueCount()
-{	
-	return	properties_.value_count;	
-}
-
-const
-std::string&	Endpoint::GetID()
-{
-	return	properties_.id;
-}
-
-void	Endpoint::UpdateInterval
+RetValue	Endpoint::SetUpdateInterval
 (
-	uint32_t	_interval
+	uint32	_interval
 )
 {
-	properties_.update_interval = _interval;
+	properties_->update_interval = _interval;
+
+	return	RET_VALUE_OK;
 }
 
 RetValue	Endpoint::SetEnable
@@ -373,58 +417,78 @@ RetValue	Endpoint::SetEnable
 	bool _enable
 )
 {
-	if (properties_.enable != _enable)
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (properties_->enable != _enable)
 	{
-		properties_.enable = _enable;
+		properties_->enable = _enable;
 
-		Device *device = (Device *)parent_;
-
-		if (device != NULL)
+		ret_value = object_manager_->SaveEndpoint(this);
+		if (ret_value != RET_VALUE_OK)
 		{
-			if (device->IsRun())
+			ERROR(this, ret_value, "Failed to set properties!");	
+		}
+		else
+		{
+			if (properties_->enable == true)
 			{
-				if (properties_.enable == true)
-				{
-					Activation();
-				}
-				else if (properties_.enable == false)
-				{
-					Deactivation();
-				}
+				Activation();
 			}
-			else 
+			else if (properties_->enable == false)
 			{
 				Deactivation();
+			}
+
+			if (properties_->enable)
+			{
+				INFO(this, "The endpoint[%s] was enabled.", properties_->id.c_str());
+			}
+			else
+			{
+				INFO(this, "The endpoint[%s] was disabled.", properties_->id.c_str());
 			}
 		}
 	}	
 
-	return	RET_VALUE_OK;
+	return	ret_value;
 }
 
 RetValue	Endpoint::Activation()
 {
 	RetValue 	ret_value = RET_VALUE_OK;
 
-	if (properties_.enable)
+	if (properties_->enable)
 	{
 		if (!activation_)
 		{
-			if (properties_.enable)
+			if (object_manager_ == NULL)
 			{
-				activation_ = true;
-			}
-
-			if (parent_ != NULL)
-			{
-				ret_value = ((Device *)parent_)->Activation(this);
+				ret_value = RET_VALUE_OBJECT_IS_NOT_INITIALIZED;
 			}
 			else
 			{
-				ret_value = RET_VALUE_NOT_ATTACHED_TO_DEVICE;
-				ERROR(this, ret_value, "The endpoint[%s] is not attached to device!", properties_.id.c_str());
+				Device*	device = object_manager_->GetDevice(properties_->device_id);
+				if (device == NULL)
+				{
+					ret_value = RET_VALUE_NOT_ATTACHED_TO_DEVICE;
+					ERROR(this, ret_value, "Failed to get device[%s].", properties_->device_id.c_str());
+				}
+				else
+				{
+					if (device->IsActivated())
+					{
+						ret_value = device->Connect(properties_->id);
+						if (ret_value == RET_VALUE_OK)
+						{
+							activation_ = true;
+						}
+					}
+					else
+					{
+						ret_value = RET_VALUE_DEVICE_NOT_ACTIVATED;
+					}
+				}
 			}
-
 		}
 	}
 
@@ -437,42 +501,79 @@ RetValue	Endpoint::Deactivation()
 
 	if (activation_)
 	{
-		activation_ = false;
-		if (parent_ != NULL)
+		if (object_manager_ == NULL)
 		{
-			((Device *)parent_)->Deactivation(this);
+			ret_value = RET_VALUE_OBJECT_IS_NOT_INITIALIZED;
 		}
 		else
 		{
-			ret_value = RET_VALUE_NOT_ATTACHED_TO_DEVICE;
-			ERROR(this, ret_value, "The endpoint[%s] is not attached to device!", properties_.id.c_str());
+			Device*	device = object_manager_->GetDevice(properties_->device_id);
+			if (device == NULL)
+			{
+				ret_value = RET_VALUE_NOT_ATTACHED_TO_DEVICE;
+				ERROR(this, ret_value, "Failed to get device[%s].", properties_->device_id.c_str());
+			}
+			else
+			{
+				ret_value = device->Disconnect(properties_->id);
+				if ((ret_value == RET_VALUE_OK) || (ret_value == RET_VALUE_OBJECT_NOT_FOUND))
+				{
+					activation_ = false;
+				}
+			}
 		}
-
 	}
 
 	return	ret_value;
 }
 
-RetValue	Endpoint::Synchronize()
-{
-	TRACE(this, "The endpoint[%s] was synchronized.");
-	return	RET_VALUE_OK;
-}
-
-void		Endpoint::MaxValueCount
+RetValue	Endpoint::SetActivation
 (
-	uint32_t _count
+	bool	_activation
 )
 {
-	properties_.value_count = _count;
+	if (_activation)
+	{
+		return	Activation();	
+	}
+	else
+	{
+		return	Deactivation();	
+	}
+}
 
-	while(value_list_.size() > properties_.value_count)
+RetValue	Endpoint::Synchronize()
+{
+	Device*	device;
+	
+	device = object_manager_->GetDevice(properties_->device_id);
+	if (device == NULL)
+	{
+		return	RET_VALUE_OBJECT_NOT_FOUND;
+	}
+
+	return	device->GetEndpointValue(this);
+}
+
+void		Endpoint::SetMaxValueCount
+(
+	uint32 _count
+)
+{
+	properties_->value_count = _count;
+
+	while(value_list_.size() > properties_->value_count)
 	{
 		value_list_.pop_front();
 	}
 }
 
-uint32_t	Endpoint::ValueCount()
+Endpoint::Properties*	Endpoint::GetProperties()
+{
+	return	properties_;
+}
+
+uint32	Endpoint::ValueCount()
 {
 	return	value_list_.size();
 }
@@ -484,7 +585,8 @@ RetValue	Endpoint::AddValue
 {
 	Lock();
 
-	if (value_list_.size() >= properties_.value_count)
+	INFO(this, "Add new value!");
+	if (value_list_.size() >= properties_->value_count)
 	{
 		value_list_.pop_front();
 	}
@@ -498,7 +600,7 @@ RetValue	Endpoint::AddValue
 
 RetValue	Endpoint::DeleteValue
 (
-	uint32_t	_count
+	uint32	_count
 )
 {
 	Lock();
@@ -532,7 +634,7 @@ TimedValue	Endpoint::GetValue()
 
 TimedValue	Endpoint::GetValue
 (
-	uint32_t _index
+	uint32 _index
 )
 {
 	TimedValue	value;
@@ -554,13 +656,13 @@ TimedValue	Endpoint::GetValue
 	return	value;
 }
 		
-uint32_t	Endpoint::GetValueList
+uint32	Endpoint::GetValueList
 (
 	TimedValue*	_value_list,
-	uint32_t	_max_count
+	uint32	_max_count
 )
 {
-	uint32_t	count = 0;
+	uint32	count = 0;
 	Lock();
 	
 	list<TimedValue>::iterator	it = value_list_.begin();
@@ -581,7 +683,7 @@ const string&	Endpoint::TypeToString
 {
 	struct	EndpointTypeInfo *type_info = kEndpointTypeInfoList;
 
-	while(type_info->type != Endpoint::TYPE_UNKNOWN)
+	while(type_info->type != Endpoint::UNKNOWN)
 	{
 		if (type_info->type == _type)
 		{
@@ -601,7 +703,7 @@ Endpoint::Type	Endpoint::StringToType
 {
 	struct	EndpointTypeInfo *type_info = kEndpointTypeInfoList;
 
-	while(type_info->type != Endpoint::TYPE_UNKNOWN)
+	while(type_info->type != Endpoint::UNKNOWN)
 	{
 		if (type_info->name.compare(_name) == 0)
 		{
@@ -611,47 +713,107 @@ Endpoint::Type	Endpoint::StringToType
 		type_info++;
 	}
 
-	return	Endpoint::TYPE_UNKNOWN;
+	return	Endpoint::UNKNOWN;
 }
 
-RetValue	Endpoint::SetProperties
+RetValue	Endpoint::Set
 (
-	const	JSONNode&	_endpoint
+	const Properties* _properties
+)
+{
+	return	properties_->Set(_properties);
+}
+
+RetValue	Endpoint::Set
+(
+	const	JSONNode&	_node
 )
 {
 	RetValue ret_value = RET_VALUE_OK;
 
-	if (_endpoint.type() == JSON_NODE)
+	if (_node.type() == JSON_NODE)
 	{
-		for(size_t i = 0 ; i < _endpoint.size() ; i++)
+		for(size_t i = 0 ; i < _node.size() ; i++)
 		{
-			SetProperties(_endpoint[i]);
+			ret_value = Set(_node[i]);
+			if (ret_value != RET_VALUE_OK)
+			{
+				break;
+			}
 		}
 	}
 	else 
 	{
-		if (_endpoint.name() == "name")
+		if (_node.name() == "name")
 		{
-			if ((_endpoint.type() != JSON_STRING) && (_endpoint.type() != JSON_NULL))
+			if ((_node.type() != JSON_STRING) && (_node.type() != JSON_NULL))
 			{
 				ret_value = RET_VALUE_INVALID_FIELD;
-				ERROR(this, ret_value, "");	
+				ERROR(this, ret_value, "Failed to set property[%s].", _node.name().c_str());	
 			}
 			else
 			{
-				properties_.name = _endpoint.as_string();
+				properties_->name = _node.as_string();
 			}
 		}
-		else if (_endpoint.name() == "id")
+		else if (_node.name() == "id")
 		{
-			if ((_endpoint.type() != JSON_STRING) && (_endpoint.type() != JSON_NULL))
+			if ((_node.type() != JSON_STRING) && (_node.type() != JSON_NULL))
 			{
 				ret_value = RET_VALUE_INVALID_FIELD;
-				ERROR(this, ret_value, "");	
+				ERROR(this, ret_value, "Failed to set property[%s].", _node.name().c_str());	
 			}
 			else
 			{
-				properties_.id = _endpoint.as_string();
+				properties_->id = _node.as_string();
+			}
+		}
+		else if (_node.name() == "deviceproperties_->id")
+		{
+			if ((_node.type() != JSON_STRING) && (_node.type() != JSON_NULL))
+			{
+				ret_value = RET_VALUE_INVALID_FIELD;
+				ERROR(this, ret_value, "Failed to set property[%s].", _node.name().c_str());	
+			}
+			else
+			{
+				properties_->id = _node.as_string();
+			}
+		}
+		else if (_node.name() == "enable")
+		{
+			if ((_node.type() != JSON_NUMBER) && (_node.type() != JSON_NULL))
+			{
+				ret_value = RET_VALUE_INVALID_FIELD;
+				ERROR(this, ret_value, "Failed to set property[%s].", _node.name().c_str());	
+			}
+			else
+			{
+				properties_->enable = _node.as_int();
+			}
+		}
+		else if (_node.name() == "update_interval")
+		{
+			if ((_node.type() != JSON_NUMBER) && (_node.type() != JSON_NULL))
+			{
+				ret_value = RET_VALUE_INVALID_FIELD;
+				ERROR(this, ret_value, "Failed to set property[%s].", _node.name().c_str());	
+			}
+			else
+			{
+				properties_->update_interval = _node.as_int();
+			}
+		}
+		else if (_node.name() == "value_count")
+		{
+			if ((_node.type() != JSON_NUMBER) && (_node.type() != JSON_NULL))
+			{
+				ret_value = RET_VALUE_INVALID_FIELD;
+				ERROR(this, ret_value, "Failed to set property[%s].", _node.name().c_str());	
+			}
+			else
+			{
+				properties_->value_count = _node.as_int();
 			}
 		}
 	}
@@ -659,14 +821,36 @@ RetValue	Endpoint::SetProperties
 	return	ret_value;
 }
 
+RetValue	Endpoint::Set
+(
+	const Kompex::SQLiteStatement*	_statement
+)
+{
+	ASSERT(_statement != NULL);
+
+	try
+	{	
+		properties_->index 			= _statement->GetColumnInt("_index");
+		properties_->id 			= _statement->GetColumnInt("properties_->id");
+		properties_->name 			= _statement->GetColumnInt("_name");
+		properties_->id 			= _statement->GetColumnInt("_deviceproperties_->id");
+		properties_->enable 		= _statement->GetColumnInt("_enable");
+		properties_->update_interval= _statement->GetColumnInt("_update_interval");
+		properties_->value_count 	= _statement->GetColumnInt("_value_count");
+	}
+	catch (Kompex::SQLiteException &exception)
+	{
+		return	RET_VALUE_DB_ENTRY_DOES_NOT_EXIST;
+	}
+
+	return	RET_VALUE_OK;
+}
+
 void	Endpoint::ReleaseParent()
 {
 	if (parent_ != NULL)
 	{
-		Device*	device = (Device *)parent_;
 		parent_ = NULL;
-
-		device->Disconnect(this);	
 	}
 }
 
@@ -680,10 +864,10 @@ Endpoint* 	Endpoint::Create
 {
 	switch(_type)
 	{
-	case	Endpoint::TYPE_SENSOR_TEMPERATURE:		return	new	EndpointSensorTemperature;
-	case	Endpoint::TYPE_SENSOR_HUMIDITY:			return	new EndpointSensorHumidity;
-	case	Endpoint::TYPE_SENSOR_VOLTAGE: 			return	new EndpointSensorVoltage;
-	case	Endpoint::TYPE_CONTROL_DIGITAL_OUTPUT:	return	new EndpointControlDigitalOutput;
+	case	Endpoint::TEMPERATURE_SENSOR:	return	new	EndpointSensorTemperature;
+	case	Endpoint::HUMIDITY_SENSOR:		return	new EndpointSensorHumidity;
+	case	Endpoint::VOLTAGE_SENSOR: 		return	new EndpointSensorVoltage;
+	case	Endpoint::DO_CONTROL:			return	new EndpointControlDigitalOutput;
 	default	:
 		return	NULL;
 	}
@@ -694,12 +878,13 @@ Endpoint* 	Endpoint::Create
 	const Endpoint::Properties* properties
 )
 {
+	INFO(NULL, "Create Endpoint : id - %s, name - %s", properties->id.c_str(), properties->name.c_str());
 	switch(properties->type)
 	{
-	case	Endpoint::TYPE_SENSOR_TEMPERATURE:		return	new	EndpointSensorTemperature((EndpointSensorTemperature::Properties*)properties);
-	case	Endpoint::TYPE_SENSOR_HUMIDITY:			return	new EndpointSensorHumidity((EndpointSensorHumidity::Properties*)properties);
-	case	Endpoint::TYPE_SENSOR_VOLTAGE: 			return	new EndpointSensorVoltage((EndpointSensorVoltage::Properties*)properties);
-	case	Endpoint::TYPE_CONTROL_DIGITAL_OUTPUT:	return	new EndpointControlDigitalOutput((EndpointControlDigitalOutput::Properties*)properties);
+	case	Endpoint::TEMPERATURE_SENSOR:	return	new	EndpointSensorTemperature((EndpointSensorTemperature::Properties*)properties);
+	case	Endpoint::HUMIDITY_SENSOR:		return	new EndpointSensorHumidity((EndpointSensorHumidity::Properties*)properties);
+	case	Endpoint::VOLTAGE_SENSOR: 		return	new EndpointSensorVoltage((EndpointSensorVoltage::Properties*)properties);
+	case	Endpoint::DO_CONTROL:			return	new EndpointControlDigitalOutput((EndpointControlDigitalOutput::Properties*)properties);
 	default	:
 		return	NULL;
 	}
@@ -711,8 +896,8 @@ ostream& operator<<
 	const Endpoint& _ep
 )
 {
-	_os << "Name : " << _ep.properties_.name << endl;
-	_os << "  ID : " << _ep.properties_.id << endl;
+	_os << "Name : " << _ep.properties_->name << endl;
+	_os << "  ID : " << _ep.properties_->id << endl;
 
 	return	_os;
 }

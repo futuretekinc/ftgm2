@@ -11,7 +11,6 @@ using namespace std;
 SNMPClient::SNMPClient()
 :	name_("snmp_client")
 {
-	TRACE(this, "The snmp client[%s] has been created.", name_.c_str());
 }
 
 SNMPClient::SNMPClient
@@ -20,7 +19,6 @@ SNMPClient::SNMPClient
 )
 {
 	name_ = _properties.name;
-	TRACE(this, "The snmp client[%s] has been created.", name_.c_str());
 }
 
 SNMPClient::~SNMPClient()

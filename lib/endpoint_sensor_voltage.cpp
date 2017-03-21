@@ -3,7 +3,7 @@
 using namespace std;
 
 EndpointSensorVoltage::Properties::Properties()
-: EndpointSensor::Properties(TYPE_SENSOR_VOLTAGE) 
+: EndpointSensor::Properties(VOLTAGE_SENSOR) 
 {
 }
 
@@ -29,7 +29,7 @@ EndpointSensorVoltage::Properties::Properties
 ) 
 : EndpointSensor::Properties(_node) 
 {
-	type = TYPE_SENSOR_VOLTAGE;
+	type = VOLTAGE_SENSOR;
 }
 
 EndpointSensorVoltage::Properties*	EndpointSensorVoltage::Properties::Duplicate()
@@ -42,7 +42,7 @@ EndpointSensorVoltage::Properties*	EndpointSensorVoltage::Properties::Duplicate(
 //////////////////////////////////////////////////////////////////////////
 
 EndpointSensorVoltage::EndpointSensorVoltage()
-:	EndpointSensor(TYPE_SENSOR_VOLTAGE)
+:	EndpointSensor(VOLTAGE_SENSOR)
 {
 }
 
@@ -50,7 +50,7 @@ EndpointSensorVoltage::EndpointSensorVoltage
 (
 	const string& _id
 )
-:	EndpointSensor(TYPE_SENSOR_VOLTAGE, _id)
+:	EndpointSensor(VOLTAGE_SENSOR, _id)
 {
 }
 

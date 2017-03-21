@@ -23,8 +23,8 @@ void	DataManager::PreProcess()
 	try 
 	{
 		database_ = new SQLiteDatabase(properties_.file_name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
-		TRACE(this, "SQLite Version : %d", database_->GetLibVersionNumber());
-		
+		INFO(this, "SQLite Version : %d", database_->GetLibVersionNumber());
+
  		statement_ = new Kompex::SQLiteStatement(database_);
 
 		if (!IsTableExist("devices"))
@@ -81,13 +81,12 @@ RetValue	DataManager::CreateDeviceTable()
 		{
 			ostringstream	query;
 
-			query << "CREATE TABLE devices (id TEXT NOT NULL PRIMARY KEY, type INTEGER, enable INTEGER, name TEXT)";
-			TRACE(this, "Query : %s", query.str().c_str());
+			query << "CREATE TABLE devices (_id TEXT NOT NULL PRIMARY KEY, _type INTEGER, _enable INTEGER, _name TEXT, _options BLOB)";
+			INFO(this, "Query : %s", query.str().c_str());
 
 			try 
 			{
 				statement_->SqlStatement(query.str());
-				statement_->ExecuteAndFree();
 			}
 			catch(SQLiteException &exception)
 			{
@@ -107,14 +106,15 @@ RetValue	DataManager::CreateDeviceTable()
 
 RetValue	DataManager::AddDevice
 (
-	Device *_device
+	Device::Properties *_properties
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
+	INFO(this, "Add a device[%s]", _properties->id.c_str());
 	if (statement_ != NULL)
 	{
-		if (IsDeviceExist(_device))
+		if (IsDeviceExist(_properties->id))
 		{
 			ret_value = CreateDeviceTable();
 			if (ret_value != RET_VALUE_OK)
@@ -126,17 +126,38 @@ RetValue	DataManager::AddDevice
 
 		ostringstream	query;
 
-		query << "INSERT INTO devices (id, type, enable, name) Values (\"" << _device->GetID() << "\", " << _device->GetType() << ", " << _device->IsEnabled() << ", \"" << _device->GetName() << "\");";
-		TRACE(this, "Query : %s", query.str().c_str());
+		query << "INSERT INTO devices (_id, _type, _enable, _name, _options) VALUES (?,?,?,?,?);";
+		INFO(this, "Query : %s", query.str().c_str());
 		try 
 		{
-			statement_->SqlStatement(query.str());
+			uint8_t*	options = NULL;
+			uint32_t	options_len = _properties->GetOptionsSize();
+
+			if (options_len > 0)
+			{
+				options = new uint8_t[options_len];	
+
+				_properties->GetOptions(options, options_len);
+			}
+
+			statement_->Sql(query.str());
+			statement_->BindString(1, _properties->id);
+			statement_->BindInt(2, _properties->type);
+			statement_->BindInt(3, _properties->enable);
+			statement_->BindString(4, _properties->name);
+			statement_->BindBlob(5, options, options_len);
+
 			statement_->ExecuteAndFree();
+
+			if (options != NULL)
+			{
+				delete options;	
+			}
 		}
 		catch(SQLiteException &exception)
 		{
 			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
-			ERROR(this, ret_value, "Failed to add device to table[%s]", _device->GetID().c_str());
+			ERROR(this, ret_value, "Failed to add device to table[%s] - %s", _properties->id.c_str(), exception.GetString().c_str());
 		}
 	}
 	else
@@ -148,10 +169,70 @@ RetValue	DataManager::AddDevice
 	return	ret_value;
 }
 
-bool	DataManager::IsDeviceExist
+RetValue	DataManager::SetDeviceProperties
 (
- Device* _device
- )
+	Device::Properties *_properties
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	INFO(this, "Set a device properties[%s]", _properties->id.c_str());
+	if (statement_ != NULL)
+	{
+		if (!IsDeviceExist(_properties->id))
+		{
+			ret_value = RET_VALUE_DB_ENTRY_DOES_NOT_EXIST;
+			if (ret_value != RET_VALUE_OK)
+			{
+				ERROR(this, ret_value, "Failed to set device properties!");
+				return	ret_value;	
+			}
+		}
+
+		ostringstream	query;
+
+		query << "UPDATE devices SET ";
+		query << "_enable=@enable";
+		query << ", ";
+		query << "_name =@name";
+		//query << ",";
+		//query << "_options=@options ";
+		query << " WHERE _id=@id";
+		
+		INFO(this, "Query : %s", query.str().c_str());
+
+		try 
+		{
+			int	index = 0;
+
+			statement_->Sql(query.str());
+
+			statement_->BindInt(++index, _properties->enable);
+			statement_->BindString(++index, _properties->name);
+			//statement_->BindBlob(++index, _properties->options);
+			statement_->BindString(++index, _properties->id);
+
+			statement_->ExecuteAndFree();
+		}
+		catch(SQLiteException &exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to add device to table[%s] - %s", _properties->id.c_str(), exception.GetString().c_str());
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	ret_value;
+}
+
+RetValue	DataManager::DeleteDevice
+(
+	const string& _id
+)
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
@@ -159,7 +240,8 @@ bool	DataManager::IsDeviceExist
 	{
 		ostringstream	query;
 
-		query << "SELECT id FROM devices WHERE id=" << "'" << _device->GetID() << "';";
+		query << "DELETE FROM devices WHERE _id=" << "'" << _id << "';";
+		INFO(this, "Query : %s", query.str().c_str());
 
 		try 
 		{
@@ -176,7 +258,7 @@ bool	DataManager::IsDeviceExist
 		catch(SQLiteException& exception)
 		{
 			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
-			ERROR(this, ret_value, "Failed to check device from table[%s]", _device->GetID().c_str());
+			ERROR(this, ret_value, "Failed to delete device from table[%s]", _id.c_str());
 		}
 
 	}
@@ -189,22 +271,59 @@ bool	DataManager::IsDeviceExist
 	return	ret_value;
 }
 
-RetValue	DataManager::GetDeviceCount
+bool	DataManager::IsDeviceExist
 (
-	uint32_t& _count
-)
+	const string&	_id
+ )
 {
+	bool		exist = false;
 	RetValue	ret_value = RET_VALUE_OK;
 
 	if (statement_ != NULL)
 	{
 		ostringstream	query;
 
-		query << "SELECT count(id) FROM devices;";
+		query << "SELECT COUNT(*) FROM devices WHERE _id = " << "'" << _id << "';";
+		INFO(this, "Query : %s", query.str().c_str());
+
+		try 
+		{
+			if (statement_->SqlAggregateFuncResult(query.str()) != 0)
+			{
+				exist = true;
+			}
+		}
+		catch(SQLiteException& exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to check device from table[%s]", _id.c_str());
+		}
+
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	exist;
+}
+
+uint32_t	DataManager::GetDeviceCount()
+{
+	RetValue	ret_value = RET_VALUE_OK;
+	uint32_t	count = 0;
+
+	if (statement_ != NULL)
+	{
+		ostringstream	query;
+
+		query << "SELECT COUNT(*) FROM devices;";
+		INFO(this, "Query : %s", query.str().c_str());
 
 		try
 		{
-			_count = statement_->SqlAggregateFuncResult(query.str());
+			count = statement_->SqlAggregateFuncResult(query.str());
 		}
 		catch(SQLiteException& exception)
 		{
@@ -218,7 +337,7 @@ RetValue	DataManager::GetDeviceCount
 		ERROR(this, ret_value, "DB not initialized.");
 	}
 
-	return	ret_value;
+	return	count;
 }
 
 RetValue	DataManager::GetDeviceProperties
@@ -236,26 +355,23 @@ RetValue	DataManager::GetDeviceProperties
 		{
 			ostringstream	query;
 
-			query << "SELECT * FROM devices ORDER BY id DESC LIMIT " << _count << " OFFSET " << _index;
-			TRACE(this, "Query : %s", query.str().c_str());
+			query << "SELECT * FROM devices ORDER BY _id DESC LIMIT " << _count << " OFFSET " << _index <<";";
+			INFO(this, "Query : %s", query.str().c_str());
 
 			try 
 			{
 				statement_->Sql(query.str());
 				while(statement_->FetchRow())
 				{
-					Device::Type type = (Device::Type)statement_->GetColumnInt("TYPE");
-					string 		id = statement_->GetColumnString("ID");
-					string 		name = statement_->GetColumnString("NAME");
-					bool		enable = statement_->GetColumnInt("ENABLE");
+					Device::Type type = (Device::Type)statement_->GetColumnInt("_type");
 
-					Device::Properties* properties = new Device::Properties(type);
-
-
-					properties->id		= id;
-					properties->name 	= name;
-					properties->enable	=enable;
-
+					Device::Properties* properties = Device::Properties::Create(type);
+	
+					if (properties != NULL)
+					{
+						properties->Set(statement_);
+				
+					}
 					_list.push_back(properties);
 					
 				}
@@ -278,24 +394,107 @@ RetValue	DataManager::GetDeviceProperties
 	return	ret_value;
 }
 
+RetValue	DataManager::SetDeviceName
+(
+	const string&	_device_id,
+	const string&	_name
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	INFO(this, "Set a device[%s] name", _device_id.c_str());
+	if (statement_ != NULL)
+	{
+		ostringstream	query;
+
+		query << "UPDATE devices SET _name =\'" << _name << "\' WHERE _id=\'" << _device_id << "\'";
+		INFO(this, "Query : %s", query.str().c_str());
+		try 
+		{
+			statement_->SqlStatement(query.str());
+		}
+		catch(SQLiteException &exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to update device name - %s", exception.GetString().c_str());
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	ret_value;
+}
+
+RetValue	DataManager::SetDeviceEnable
+(
+	const string&	_device_id,
+	bool	_enable
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	INFO(this, "Set a device[%s] enable", _device_id.c_str());
+	if (statement_ != NULL)
+	{
+		ostringstream	query;
+
+		query << "UPDATE devices SET _enable=" << _enable << " WHERE _id=\'" << _device_id << "\'";
+		INFO(this, "Query : %s", query.str().c_str());
+		try 
+		{
+			statement_->SqlStatement(query.str());
+		}
+		catch(SQLiteException &exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to update device enable - %s", exception.GetString().c_str());
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	ret_value;
+}
+
 RetValue	DataManager::CreateEndpointTable()
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	TRACE_ENTRY(this);
 	if (statement_ != NULL)
 	{
 		if (!IsTableExist("endpoints"))
 		{
 			ostringstream	query;
 
-			query << "CREATE TABLE endpoints (id TEXT NOT NULL PRIMARY KEY, type INTEGER, _index INTEGER, enable INTEGER, name TEXT)";
-			TRACE(this, "Query : %s", query.str().c_str());
+			query << "CREATE TABLE endpoints (";
+			query << "_id TEXT NOT NULL PRIMARY KEY";
+			query << ", ";
+			query << "_type INTEGER";
+			query << ", ";
+			query << "_index INTEGER";
+			query << ", ";
+			query << "_enable INTEGER";
+			query << ", ";
+			query << "_name TEXT";
+			query << ", ";
+			query << "_device_id TEXT";
+			query << ", ";
+			query << "_update_interval INTEGER";
+			query << ", ";
+			query << "_value_count INTEGER";
+			query << ", ";
+			query << "_options BLOB)";
+			INFO(this, "Query : %s", query.str().c_str());
 
 			try 
 			{
 				statement_->SqlStatement(query.str());
-				statement_->ExecuteAndFree();
 			}
 			catch(SQLiteException &exception)
 			{
@@ -315,7 +514,7 @@ RetValue	DataManager::CreateEndpointTable()
 
 RetValue	DataManager::AddEndpoint
 (
-	Endpoint* _endpoint
+	Endpoint::Properties* _properties
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
@@ -334,18 +533,42 @@ RetValue	DataManager::AddEndpoint
 
 		ostringstream	query;
 
-		query << "INSERT INTO endpoints (id, type, _index, enable, name) Values (\"" << _endpoint->GetID() << "\", " ;
-		query << _endpoint->GetType() << ", " << _endpoint->GetIndex() << ", " << _endpoint->IsEnabled() << ", \"" << _endpoint->GetName() << "\")";
-		TRACE(this, "Query : %s", query.str().c_str());
+		query << "INSERT INTO endpoints (_id, _type, _index, _enable, _name, _device_id, _update_interval, _value_count, _options) ";
+		query << "Values (?,?,?,?,?,?,?,?,?);";
 		try 
 		{
-			statement_->SqlStatement(query.str());
+			uint8_t*	options = NULL;
+			uint32_t	options_len = _properties->GetOptionsSize();
+
+			if (options_len > 0)
+			{
+				options = new uint8_t[options_len];	
+
+				_properties->GetOptions(options, options_len);
+			}
+
+			statement_->Sql(query.str());
+			statement_->BindString(1, _properties->id);
+			statement_->BindInt(2, _properties->type);
+			statement_->BindInt(3, _properties->index);
+			statement_->BindInt(4, _properties->enable);
+			statement_->BindString(5, _properties->name);
+			statement_->BindString(6, _properties->device_id);
+			statement_->BindInt(7, _properties->update_interval);
+			statement_->BindInt(8, _properties->value_count);
+			statement_->BindBlob(9, options, options_len);
+
 			statement_->ExecuteAndFree();
+			
+			if (options != NULL)
+			{
+				delete options;	
+			}
 		}
 		catch(SQLiteException &exception)
 		{
 			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
-			ERROR(this, ret_value, "Failed to add device to table[%s]", _endpoint->GetID().c_str());
+			ERROR(this, ret_value, "Failed to add device to table[%s]", _properties->id.c_str());
 		}
 	}
 	else
@@ -357,9 +580,9 @@ RetValue	DataManager::AddEndpoint
 	return	ret_value;
 }
 
-	bool		DataManager::IsEndpointExist
+RetValue	DataManager::DeleteEndpoint
 (
- Endpoint* _endpoint
+	const string& _id
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
@@ -368,17 +591,26 @@ RetValue	DataManager::AddEndpoint
 	{
 		ostringstream	query;
 
-		query << "SELECT id FROM endpoints WHERE id=" << "'" << _endpoint->GetID() << "';";
+		query << "DELETE FROM endpoints WHERE _id=" << "'" << _id << "';";
+		INFO(this, "Query : %s", query.str().c_str());
 
-		statement_->Sql(query.str());
-
-		if (statement_->GetColumnCount() != 0)
+		try 
 		{
-			statement_->FreeQuery();
-			return	true;
-		}
+			statement_->Sql(query.str());
 
-		statement_->FreeQuery();
+			if (statement_->GetColumnCount() != 0)
+			{
+				statement_->FreeQuery();
+				return	true;
+			}
+
+			statement_->FreeQuery();
+		}
+		catch(SQLiteException& exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to delete endpoint from table[%s]", _id.c_str());
+		}
 
 	}
 	else
@@ -388,6 +620,35 @@ RetValue	DataManager::AddEndpoint
 	}
 
 	return	ret_value;
+}
+
+bool		DataManager::IsEndpointExist
+(
+	const string& _id
+)
+{
+	bool		exist = false;
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (statement_ != NULL)
+	{
+		ostringstream	query;
+
+		query << "SELECT COUNT(_id) FROM endpoints WHERE _id=" << "'" << _id << "';";
+		INFO(this, "Query : %s", query.str().c_str());
+
+		if (statement_->SqlAggregateFuncResult(query.str()) != 0)
+		{
+			exist = true;
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	exist;
 }
 
 RetValue	DataManager::GetEndpointProperties
@@ -401,40 +662,37 @@ RetValue	DataManager::GetEndpointProperties
 
 	if (statement_ != NULL)
 	{
-		if (IsTableExist("devices"))
+		if (IsTableExist("endpoints"))
 		{
 			ostringstream	query;
 
-			query << "SELECT * FROM endpoints ORDER BY id DESC LIMIT " << _count << " OFFSET " << _index <<";";
-			TRACE(this, "Query : %s", query.str().c_str());
-
+			query << "SELECT * FROM endpoints ORDER BY _id DESC LIMIT " << _count << " OFFSET " << _index <<";";
+			INFO(this, "Query : %s", query.str().c_str());
 			try 
 			{
 				statement_->Sql(query.str());
 
 				while(statement_->FetchRow())
 				{
-					TRACE(this, "get id : %s", statement_->GetColumnDeclaredDatatype(0));
-					string 		id = statement_->GetColumnString("id");
-					TRACE(this, "get type : %s", statement_->GetColumnDeclaredDatatype(1));
-					Endpoint::Type type = (Endpoint::Type)statement_->GetColumnInt("type");
-					TRACE(this, "get index");
-					uint32_t	index = statement_->GetColumnInt("_index");
-					TRACE(this, "get name");
-					string 		name = statement_->GetColumnString("name");
-					TRACE(this, "get enable");
-					bool		enable = statement_->GetColumnInt("enable");
+					Endpoint::Type 	type = (Endpoint::Type)statement_->GetColumnInt("_type");
 
-					Endpoint::Properties* properties = new Endpoint::Properties(type);
+					INFO(this, "Endpoint type : %s", Endpoint::TypeToString(type).c_str());
 
-
-					properties->id		= id;
-					properties->index	= index;
-					properties->name 	= name;
-					properties->enable	=enable;
-
-					_list.push_back(properties);
-					
+					Endpoint::Properties* properties = Endpoint::Properties::Create(type);
+					if (properties != NULL)
+					{
+						ret_value = properties->Set(statement_);
+						if (ret_value == RET_VALUE_OK)
+						{
+							INFO(this, "Add endpoint [%s]", properties->id.c_str());
+							_list.push_back(properties);
+						}
+						else
+						{
+							delete properties;	
+							ERROR(this, ret_value, "Failed to create endpoint properties!");
+						}
+					}					
 				}
 
 				statement_->FreeQuery();
@@ -455,6 +713,94 @@ RetValue	DataManager::GetEndpointProperties
 	return	ret_value;
 }
 
+RetValue	DataManager::SetEndpointProperties
+(
+	Endpoint::Properties* _properties
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (statement_ != NULL)
+	{
+		if (!IsTableExist("endpoints"))
+		{
+			ret_value =  CreateEndpointTable();
+			if (ret_value != RET_VALUE_OK)
+			{
+				ERROR(this, ret_value, "Failed to create table[endpoints]");
+				return	ret_value;
+			}
+		}
+
+		try 
+		{
+			int			index=0;
+			ostringstream	query;
+			uint8_t*	options = NULL;
+			uint32_t	options_len = _properties->GetOptionsSize();
+
+			if (options_len > 0)
+			{
+				options = new uint8_t[options_len];	
+
+				_properties->GetOptions(options, options_len);
+			}
+
+			query << "UPDATE endpoints SET ";
+			query << "_index=@index";
+			query << ", ";
+			query << "_enable=@enable";
+			query << ", ";
+			query << "_name=@name";
+			query << ", ";
+			query << "_device_id=@device_id";
+			query << ", ";
+			query << "_update_interval=@update_interval";
+			query << ", ";
+			query << "_value_count=@value_count";
+			if(options_len > 0)
+			{
+				query << ", ";
+				query << "_options=@options";
+			}
+			query << "  WHERE _id=@id";
+
+			statement_->Sql(query.str());
+			statement_->BindInt(++index, _properties->index);
+			statement_->BindInt(++index, _properties->enable);
+			statement_->BindString(++index, _properties->name);
+			statement_->BindString(++index, _properties->device_id);
+			statement_->BindInt(++index, _properties->update_interval);
+			statement_->BindInt(++index, _properties->value_count);
+			if(options_len > 0)
+			{
+				statement_->BindBlob(++index, options, options_len);
+			}
+			statement_->BindString(++index, _properties->id);
+
+			statement_->ExecuteAndFree();
+			
+			if (options != NULL)
+			{
+				delete options;	
+			}
+		}
+		catch(SQLiteException &exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to add endpoint[%s] to table[endpoints] - %s", _properties->id.c_str(), exception.GetString().c_str());
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	ret_value;
+}
+
+
 RetValue	DataManager::CreateValueTable
 (
 	const std::string& _id
@@ -468,13 +814,13 @@ RetValue	DataManager::CreateValueTable
 		{
 			ostringstream	query;
 
-			query << "CREATE TABLE " << _id << " (time INTEGER NOT NULL PRIMARY KEY, value DOUBLE)";
-			TRACE(this, "Query : %s", query.str().c_str());
+			query << "CREATE TABLE " << _id << " (_time INTEGER NOT NULL PRIMARY KEY, _value DOUBLE);";
+			INFO(this, "Query : %s", query.str().c_str());
 
 			try 
 			{
-				statement_->SqlStatement(query.str());
-				statement_->ExecuteAndFree();
+				statement_->Sql(query.str());
+				statement_->FreeQuery();
 			}
 			catch(SQLiteException &exception)
 			{
@@ -492,22 +838,20 @@ RetValue	DataManager::CreateValueTable
 	return	ret_value;
 }
 
-RetValue	DataManager::GetEndpointCount
-(
-	uint32_t& _count
-)
+uint32_t	DataManager::GetEndpointCount()
 {
 	RetValue	ret_value = RET_VALUE_OK;
+	uint32_t	count = 0;
 
 	if (statement_ != NULL)
 	{
 		ostringstream	query;
 
-		query << "SELECT COUNT(id) FROM endpoints;";
+		query << "SELECT COUNT(_id) FROM endpoints;";
 
 		try
 		{
-			_count = statement_->SqlAggregateFuncResult(query.str());
+			count = statement_->SqlAggregateFuncResult(query.str());
 		}
 		catch(SQLiteException& exception)
 		{
@@ -521,7 +865,7 @@ RetValue	DataManager::GetEndpointCount
 		ERROR(this, ret_value, "DB not initialized.");
 	}
 
-	return	ret_value;
+	return	count;
 }
 
 RetValue	DataManager::AddValue
@@ -539,15 +883,12 @@ RetValue	DataManager::AddValue
 		{
 			ostringstream	query;
 
-			query << "INSERT INTO " <<  _id << " (time, value) Values (";
-			query << _value_list[i].GetTime().ToString() << ", " ;
-			query << _value_list[i].ToFloat();
-			query << ")" ;
-			TRACE(this, "Query : %s", query.str().c_str());
+			query << "INSERT INTO " << _id <<" (time, value) Values (" << _value_list[i].GetTime().ToString() << "," << _value_list[i].ToFloat() << ");";
+			INFO(this, "Query : %s", query.str().c_str());
 			try 
 			{
-				statement_->SqlStatement(query.str());
-				statement_->ExecuteAndFree();
+				statement_->Sql(query.str());
+				statement_->FreeQuery();
 			}
 			catch(SQLiteException &exception)
 			{
@@ -578,6 +919,7 @@ RetValue	DataManager::GetValueCount
 		ostringstream	query;
 
 		query << "SELECT COUNT(*) FROM " << _id << ";";
+		INFO(this, "Query : %s", query.str().c_str());
 
 		try
 		{
@@ -610,7 +952,7 @@ bool	DataManager::IsTableExist
 		ostringstream	query;
 
 		query << "SELECT COUNT(*) FROM sqlite_master WHERE name=" << "'" << _name << "';";
-		TRACE(this, "Query : %s", query.str().c_str());
+		INFO(this, "Query : %s", query.str().c_str());
 
 		if (statement_->SqlAggregateFuncResult(query.str()) != 0)
 		{

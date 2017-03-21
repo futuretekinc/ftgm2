@@ -7,128 +7,268 @@
 
 using namespace std;
 
-Debug	debug;
+struct	TraceLevelString
+{
+	string			name;
+	Trace::Level	level;
+}	
+_level_strings[] =
+{
+	{	.name = "info",			.level = Trace::Level::INFO	},
+	{	.name = "information",	.level = Trace::Level::INFO	},
+	{	.name = "warn",			.level = Trace::Level::WARN	},
+	{	.name = "warning",		.level = Trace::Level::WARN	},
+	{	.name = "erro",			.level = Trace::Level::ERROR	},
+	{	.name = "error",		.level = Trace::Level::ERROR	},
+	{	.name = "crit",			.level = Trace::Level::CRITICAL},
+	{	.name = "critical",		.level = Trace::Level::CRITICAL},
+	{	.name = "fatl",			.level = Trace::Level::FATAL	},
+	{	.name = "fatal",		.level = Trace::Level::FATAL	}
+};
 
-Debug::Debug()
-:	trace_on_(false), error_on_(false)
+Trace	_trace;
+
+Trace::Trace()
 {
 	output_line_ = 0;
-	output_ = &cout;
+	file_name_   = "trace.log";
 }
 
-void	Debug::Trace
+const
+std::string	Trace::GetLevelString
 (
-	bool _on
+	Level _level
 )
 {
-	trace_on_ = _on;
+	uint32	i;
+
+	for(i = 0 ; i < sizeof(_level_strings) / sizeof(TraceLevelString) ; i++)
+	{
+		if (_level_strings[i].level == _level)
+		{
+			return	_level_strings[i].name;	
+		}
+	}
+
+	return	"off";	
 }
 
-void	Debug::Error
+Trace::Level	Trace::ToLevel
 (
-	bool _on
+	const std::string& _level
 )
 {
-	error_on_ = _on;
+	uint32	i;
+
+	for(i = 0 ; i < sizeof(_level_strings) / sizeof(TraceLevelString) ; i++)
+	{
+		if (_level_strings[i].name == _level)
+		{
+			return	_level_strings[i].level;	
+		}
+	}
+
+	return	OFF;	
 }
 
-void	Debug::Error
+void	Trace::Print
 (
 	Object *_object,
+	Level _level,
 	const std::string& _function, 
 	int _line, 
-	int _code, 
+	RetValue	_code, 
 	const char* _format,
 	...
 )
 {
-	va_list	variable_list;
-	time_t          current_time;
+	va_list			variable_list;
 	char			output_buffer[2048];
-	char			time_string[32];
-	ofstream		out;
-	ostringstream	buffer;
+	Properties*		properties = NULL;
+	string			class_name;
 
-	if (error_on_)
+	if (_object != NULL)
 	{
-		out.open("trace.log", ofstream::out | ofstream::app);
+		class_name = _object->ClassName();
+	}
+	else
+	{
+		class_name = "global";	
+	}
 
+	map<string, Properties *>::iterator it = class_map_.find(class_name);
+	if (it == class_map_.end())
+	{
+		try
+		{
+			properties = new Properties;
+			properties->name	= class_name;
+			properties->level 	= OFF;
+
+			class_map_[class_name] = properties	;
+		}
+		catch(std::bad_alloc& e)
+		{
+			cerr << "Exception bad alloc!" << endl;
+			return;
+		}
+		catch(std::exception& e)
+		{
+			cerr << "Exception occurred!" << endl;
+			return;
+		}
+	}
+	else
+	{
+		properties = it->second;	
+	}
+
+//	if (properties->level >= _level)
+	{
 		va_start(variable_list, _format);
-
-		current_time = time(NULL);
-
-		out << setw(4) << ++output_line_ << " : ";
-		strftime(time_string, sizeof(time_string), "%Y-%m-%d %H:%M:%S", localtime(&current_time));
-		out << "[" << time_string << "]";
-		out << "[ERROR]";
-		if (_object != NULL)
-		{
-			buffer << _object->ClassName() << "." << _function;
-		}
-		else
-		{
-			buffer <<  _function;
-		}
-		out << "[" << setw(20) << buffer.str().substr(0, 20) << "]";
-		out << "[" << setw(4) << _line << "]";
-		out << "[" << setbase(16) << setw(4) << setfill('0') << _code << "] ";
-
 		vsnprintf( output_buffer, sizeof(output_buffer), _format, variable_list);
-
-		out << output_buffer << endl;;
-
 		va_end(variable_list);
 
-		out.close();
+		Output(_level, class_name, _function, _line, _code, output_buffer);
 	}
 }
 
-void Debug::Trace
+RetValue	Trace::SetLevel
 (
-	Object *_object,
-	const std::string& _function, 
-	int _line, 
-	const char* _format,
-	...
+	const char *_name,
+	Level	_level
 )
 {
-	va_list	variable_list;
-	time_t          current_time;
-	char			output_buffer[2048];
-	char			time_string[32];
-	ofstream		out;
-	ostringstream	buffer;
-
-	if (trace_on_)
+	map<string, Properties *>::iterator it = class_map_.find(_name);
+	if (it == class_map_.end())
 	{
-		va_start(variable_list, _format);
-
-		out.open("trace.log", ofstream::out | ofstream::app);
-
-		current_time = time(NULL);
-
-		out << setw(4) << ++output_line_ << " : ";
-		strftime(time_string, sizeof(time_string), "%Y-%m-%d %H:%M:%S", localtime(&current_time));
-		out << "[" << time_string << "]";
-		out << "[TRACE]";
-		if (_object != NULL)
+		try
 		{
-			buffer << _object->ClassName() << "." << _function;
+			Properties *properties;
+			properties = new Properties;
+			properties->name = _name;
+			properties->level = _level;
+
+			class_map_[_name] = properties	;
 		}
-		else
+		catch(std::bad_alloc& e)
 		{
-			buffer <<  _function;
+			cerr << "Exception bad alloc!" << endl;
+			return RET_VALUE_NOT_ENOUGH_MEMORY;
 		}
-		out << "[" << setw(20) << buffer.str().substr(0, 20) << "]";
-		out << "[" << setw(4) << _line << "]";
-		out << "[####] ";
-
-		vsnprintf( output_buffer, sizeof(output_buffer), _format, variable_list);
-
-		out << output_buffer << endl;;
-
-		va_end(variable_list);
-
-		out.close();
+		catch(std::exception& e)
+		{
+			cerr << "Exception occurred!" << endl;
+			return RET_VALUE_ERROR;
+		}
 	}
+	else
+	{
+		it->second->level = _level;	
+	}
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	Trace::SetLevel
+(
+	const string&	_name,
+	Level		_level
+)
+{
+	return	SetLevel(_name.c_str(), _level);
+}
+
+RetValue	Trace::SetLevel
+(
+	const char *	_name,
+	const char * 	_level
+)
+{
+	return	SetLevel(_name, ToLevel(_level));
+}
+
+RetValue	Trace::SetLevel
+(
+	const string&	_name,
+	const string& _level
+)
+{
+	return	SetLevel(_name.c_str(), ToLevel(_level));
+}
+
+RetValue	Trace::SetLevel
+(
+	Object*	_object,
+	Level	_level
+)
+{
+	return	SetLevel(_object->ClassName(), _level);
+}
+
+void	Trace::Output
+(
+	Level		_level,
+	std::string _name,
+	std::string _function,
+	uint32		_line,
+	RetValue	_ret_value,
+	const char*	_message
+)
+{
+	time_t	current_time;
+	char	time_string[32];
+	ostringstream	field_function;
+	ofstream	out;
+
+	current_time = time(NULL);
+	strftime(time_string, sizeof(time_string), "%Y-%m-%d %H:%M:%S", localtime(&current_time));
+
+	field_function << _name << "." << _function;
+
+	out.open(file_name_, ofstream::out | ofstream::app);
+
+	out << setw(4) << ++output_line_ << " : ";
+	out << "[" << GetLevelString(_level) << "]";
+	out << "[" << time_string << "]";
+	out << "[" << setw(32) << field_function.str().substr(0, 32) << "]";
+	out << "[" << setw(4) << _line << "]";
+	out << "[" << setbase(16) << setw(4) << setfill('0') << _ret_value << "] ";
+	out << _message << endl;;
+
+	out.close();
+}
+
+Trace::Properties*	Trace::GetProperties
+(
+	const std::string& _name
+)
+{
+	map<string, Properties *>::iterator it = class_map_.find(_name);
+	if (it != class_map_.end())
+	{
+		return	it->second;
+	}
+
+	return	NULL;
+}
+
+Trace::Properties* Trace::GetPropertiesAt
+(
+	uint32 index
+)
+{
+	map<string, Properties *>::iterator it = class_map_.begin();
+	while(it != class_map_.end())
+	{
+		if (index == 0)
+		{
+			return	it->second;
+		}
+
+		index--;
+		it++;
+	}
+
+	return	NULL;
 }

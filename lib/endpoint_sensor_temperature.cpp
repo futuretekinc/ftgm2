@@ -5,33 +5,44 @@
 using namespace std;
 
 EndpointSensorTemperature::Properties::Properties()
-: EndpointSensor::Properties(TYPE_SENSOR_TEMPERATURE)
+: EndpointSensor::Properties(TEMPERATURE_SENSOR) 
 {
+}
+
+EndpointSensorTemperature::Properties::Properties
+(
+	Kompex::SQLiteStatement*	_statement
+)
+: EndpointSensor::Properties(TEMPERATURE_SENSOR)
+{
+	Set(_statement);
 }
 
 EndpointSensorTemperature::Properties::Properties
 (
 	const	Properties& _properties
 )
-:	EndpointSensor::Properties(_properties)
+: EndpointSensor::Properties(TEMPERATURE_SENSOR)
 {
+	Set(&_properties);
 }
 
 EndpointSensorTemperature::Properties::Properties
 (
 	const	Properties* _properties
 )
-:	EndpointSensor::Properties(_properties)
+: EndpointSensor::Properties(TEMPERATURE_SENSOR)
 {
+	Set(_properties);
 }
 
 EndpointSensorTemperature::Properties::Properties
 (
 	const JSONNode& _node
 ) 
-: EndpointSensor::Properties(_node) 
+: EndpointSensor::Properties(TEMPERATURE_SENSOR)
 {
-	type = TYPE_SENSOR_TEMPERATURE;
+	Set(_node);
 }
 
 EndpointSensorTemperature::Properties*	EndpointSensorTemperature::Properties::Duplicate()
@@ -44,8 +55,8 @@ EndpointSensorTemperature::Properties*	EndpointSensorTemperature::Properties::Du
 // Temperture Sensor endpoint
 //////////////////////////////////////////////////////////////////////////
 
-EndpointSensorTemperature::EndpointSensorTemperature()
-:	EndpointSensor(TYPE_SENSOR_TEMPERATURE)
+EndpointSensorTemperature::EndpointSensorTemperature ()
+:	 EndpointSensor(TEMPERATURE_SENSOR)
 {
 }
 
@@ -53,7 +64,7 @@ EndpointSensorTemperature::EndpointSensorTemperature
 (
 	const string& _id
 )
-:	EndpointSensor(TYPE_SENSOR_TEMPERATURE, _id)
+:	EndpointSensor(TEMPERATURE_SENSOR, _id)
 {
 }
 
@@ -61,35 +72,17 @@ EndpointSensorTemperature::EndpointSensorTemperature
 (
 	const Properties& _properties
 )
-:	EndpointSensor(_properties)
+:	 EndpointSensor(TEMPERATURE_SENSOR)
 {
+	Set(&_properties);
 }
 
 EndpointSensorTemperature::EndpointSensorTemperature
 (
 	const Properties* _properties
 )
-:	EndpointSensor(_properties)
+:	 EndpointSensor(TEMPERATURE_SENSOR)
 {
+	Set(_properties);
 }
 
-RetValue	EndpointSensorTemperature::Synchronize()
-{
-	RetValue	ret_value = RET_VALUE_OK;
-
-	if (parent_ == NULL)
-	{
-		ret_value = RET_VALUE_NOT_ATTACHED_TO_DEVICE;
-		ERROR(this, ret_value, "The endpoint[%s] is not attached to device.", properties_.id.c_str());
-
-	}
-	else
-	{
-		Device *device = (Device *)parent_;
-
-		device->GetValue(this);
-
-		TRACE(this, "The endpoint[%s] was synchronized.", properties_.id.c_str());
-	}
-	return	ret_value;
-}

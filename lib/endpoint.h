@@ -6,6 +6,7 @@
 #include <list>
 #include "object.h"
 #include "libjson/libjson.h"
+#include "KompexSQLiteStatement.h"
 #include "value.h"
 
 class	ObjectManager;
@@ -18,41 +19,52 @@ class	Endpoint : public Object
 public:
 	enum	Type
 	{
-		TYPE_UNKNOWN = 0,
-		TYPE_SENSOR,
-		TYPE_SENSOR_TEMPERATURE,
-		TYPE_SENSOR_HUMIDITY,
-		TYPE_SENSOR_VOLTAGE,
-		TYPE_SENSOR_CURRENT,
-		TYPE_SENSOR_DIGITAL_INPUT,
+		UNKNOWN = 0,
+		TEMPERATURE_SENSOR,
+		HUMIDITY_SENSOR,
+		VOLTAGE_SENSOR,
+		CURRENT_SENSOR,
+		DI_SENSOR,
 
-		TYPE_CONTROL = 1000,
-		TYPE_CONTROL_DIGITAL_OUTPUT
+		DO_CONTROL = 100
 	};
 
-	struct	Properties
+	struct Properties
 	{
+					Properties(Type _type = UNKNOWN);
 					Properties(const Properties& _properties);
 					Properties(const Properties* _properties);
-					Properties(Type _type = TYPE_UNKNOWN, uint32_t _index = 0);
-					Properties(const JSONNode& _node);
 		virtual		~Properties();
 
 		static
+		Properties*	Create(Type _type);
+		static
+		Properties* Create(const Properties* _properties);
+		static
 		Properties*	Create(const JSONNode& _node);
 		static
-		Properties*	Create(Type _type);
+		Properties*	Create(const Kompex::SQLiteStatement*	_statement);
+
 		virtual
-		Properties*	Duplicate();
 		RetValue	Set(const JSONNode& _node);
+		virtual		
+		RetValue	Set(const Properties* _properties);
+		virtual
+		RetValue	Set(const Kompex::SQLiteStatement*	_statement);
+	
+		virtual
+		uint32		GetOptionsSize()	{	return	0;	};
+		virtual
+		uint32		GetOptions(uint8_t *options, uint32 options_len);
 
 		Type		type;
-		uint32_t	index;
 		std::string	id;
+		uint32		index;
 		std::string	name;
+		std::string	device_id;
 		bool		enable;
-		uint32_t	update_interval;
-		uint32_t	value_count;	
+		uint32		update_interval;
+		uint32		value_count;	
 	};
 
 	class	PropertiesList : public std::list<Properties*>
@@ -72,42 +84,53 @@ public:
 	static
 	Endpoint*		Create(const Properties* properties);
 
-	Type			GetType();
-	uint32_t		GetIndex();
-	const
-	std::string&	GetID();
+	Type			GetType()	{	return	properties_->type;	};
 	const 
-	std::string&	GetName();
+	std::string&	GetID()		{	return	properties_->id;	};
+	const 
+	std::string&	GetName()	{	return	properties_->name;	};
 	const
-	std::string&	SetName(const std::string& _name);
+	uint32			GetIndex()	{	return	properties_->index;	};
+	const
+	RetValue		SetName(const std::string& _name);
 
-	bool			IsEnabled();
+	const
+	std::string&	GetDeviceID()	{	return	properties_->device_id;	}
+
+	bool			IsEnabled()	{	return	properties_->enable;};
 	RetValue		SetEnable(bool _enable);
 
-	uint32			UpdateInterval();
-	void			UpdateInterval(uint32_t	_interval);
+	uint32			GetUpdateInterval()	{	return	properties_->update_interval;}	;
+	RetValue		SetUpdateInterval(uint32	_interval);
 	
+	uint32			GetMaxValueCount()		{	return	properties_->value_count;	};
+	void			SetMaxValueCount(uint32 _count);
+
+	virtual
+	Properties*		GetProperties();
+
 	RetValue		Activation();
 	RetValue		Deactivation();
 	bool			IsActivated();
+	RetValue		SetActivation(bool _activation);
 
 	virtual
 	RetValue		Synchronize();
 
-	uint32_t		MaxValueCount()	;
-	void			MaxValueCount(uint32_t _count);
-
-	uint32_t		ValueCount();
-
+	uint32			ValueCount();
 	RetValue		AddValue(const TimedValue& _value);
-	RetValue		DeleteValue(uint32_t _count);
+	RetValue		DeleteValue(uint32 _count);
 
 	TimedValue		GetValue();
-	TimedValue		GetValue(uint32_t _index);
-	uint32_t		GetValueList(TimedValue* _value_list, uint32_t _count);
+	TimedValue		GetValue(uint32 _index);
+	uint32			GetValueList(TimedValue* _value_list, uint32 _count);
 
 	virtual	
-	RetValue		SetProperties(const	JSONNode&	_endpoint);
+	RetValue		Set(const JSONNode&	_endpoint);
+	virtual	
+	RetValue		Set(const Properties* _properties);
+	virtual	
+	RetValue		Set(const Kompex::SQLiteStatement*	_statement);
 
 	static 	
 	Type			StringToType(const std::string& _name);
@@ -120,10 +143,11 @@ public:
 protected:
 	void			ReleaseParent();
 
-	Properties		properties_;
+	Properties*		properties_;
 
 	bool			activation_;
 
+	ObjectManager*	object_manager_;
 	std::list<TimedValue>	value_list_;
 };
 

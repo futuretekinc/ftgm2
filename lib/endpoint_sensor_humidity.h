@@ -2,6 +2,7 @@
 #define	ENDPOINT_SENSOR_HUMIDITY_H_
 
 #include "endpoint_sensor.h"
+#include "KompexSQLiteStatement.h"
 
 class	EndpointSensorHumidity : public EndpointSensor
 {
@@ -14,6 +15,7 @@ public:
 		Properties(const JSONNode& _node);
 
 		Properties*	Duplicate();
+		RetValue	Set(Kompex::SQLiteStatement*	_statement);
 	};
 
 	EndpointSensorHumidity();
