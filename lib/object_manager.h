@@ -24,6 +24,8 @@ public:
 	ObjectManager();
 	~ObjectManager();
 
+	RetValue	Load(std::string _file_name);
+
 	RetValue	Destroy(const std::string& _device_id);
 
 	RetValue	CreateDevice(Device::Properties *_properties);
@@ -64,7 +66,6 @@ public:
 	RetValue	Disconnect(DataManager* _data_manager);
 	DataManager* GetDataManager();
 
-	RetValue	Load(std::string _file_name);
 	RetValue	LoadFromDataManager();
 
 	void		OnMessage(Message* _message);

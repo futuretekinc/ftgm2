@@ -65,7 +65,7 @@ RetValue	ShellCommandDatabase
 
 				count = data_manager->GetEndpointCount();
 
-				Endpoint::PropertiesList	_list;
+				list<Endpoint::Properties*>	_list;
 
 				_shell->Out() << "Endpoint Count : " << _count << endl;
 

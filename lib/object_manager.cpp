@@ -270,7 +270,7 @@ Device*		ObjectManager::GetDevice
 	return	NULL;
 }
 
-RetValue	ObjectManager::LoadDevice
+RetValue	ObjectManager::LoadDevices
 (
 	const	JSONNode& _json_node
 )
@@ -281,10 +281,25 @@ RetValue	ObjectManager::LoadDevice
 	{
 		for(int i = 0 ; i < (int)_json_node.size() ; i++)
 		{
-			LoadDevice(_json_node[i]);	
+			ret_value = LoadDevice(_json_node[i]);	
+			if (ret_value != RET_VALUE_OK)
+			{
+				break;	
+			}
 		}
 	}
-	else if (_json_node.type() == JSON_NODE)
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::LoadDevice
+(
+	const	JSONNode& _json_node
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (_json_node.type() == JSON_NODE)
 	{
 		Device* device = NULL;
 

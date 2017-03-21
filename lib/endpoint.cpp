@@ -24,57 +24,21 @@ struct	EndpointTypeInfo
 	{ Endpoint::UNKNOWN, 	""		}
 };
 
-#if 0
 Endpoint::Properties::Properties
 (
-	const Properties& _properties
-)
-{
-	type	= _properties.type;
-	index	= _properties.index;
-	id 		= _properties.id;
-	name 	= _properties.name;
-	enable 	= _properties.enable;
-	device_id=_properties.device_id;
-	update_interval = _properties.update_interval;
-	value_count 	= _properties.value_count;
-}
-
-Endpoint::Properties::Properties
-(
-	const Properties* _properties
-)
-{
-	type	= _properties->type;
-	index	= _properties->index;
-	id 		= _properties->id;
-	name 	= _properties->name;
-	enable 	= _properties->enable;
-	device_id=_properties->device_id;
-	update_interval = _properties->update_interval;
-	value_count 	= _properties->value_count;
-}
-#endif
-
-Endpoint::Properties::Properties
-(
-	Type _type,
-	const string&	_id
+	Type _type
 ) 
-: type(_type), id(_id)
+: type(_type)
 {
-	if (id.length() == 0)
-	{
-		ostringstream	buffer;
-		Time			time = Time::GetCurrentTime();
+	ostringstream	buffer;
+	Time			time = Time::GetCurrentTime();
 
-		buffer << time.Milliseconds();
+	buffer << time.Milliseconds();
 
-		id		=	"ep-" + buffer.str();
-	}
-	index = 0;
-	name = "";
-	enable = false;
+	id		= "ep-" + buffer.str();
+	index 	= 0;
+	name 	= "";
+	enable 	= false;
 	device_id="";
 	update_interval = 1000;
 	value_count = 100;
@@ -390,6 +354,11 @@ RetValue	Endpoint::Properties::SetProperty
 	return	RET_VALUE_INVALID_FIELD;
 }
 
+uint32	Endpoint::Properties::GetOptionsSize()
+{	
+	return	0;	
+};
+
 uint32	Endpoint::Properties::GetOptions
 (
 	uint8_t *options, 
@@ -397,16 +366,6 @@ uint32	Endpoint::Properties::GetOptions
 )
 {
 	return	0;
-}
-
-Endpoint::PropertiesList::~PropertiesList()
-{
-	list<Properties*>::iterator it = this->begin();
-	while(it != this->end())
-	{
-		delete (*it);
-		it++;	
-	}
 }
 
 ////////////////////////////////////////////////////
@@ -429,8 +388,9 @@ Endpoint::Endpoint
 )
 :	activation_(false)
 {
-	properties_ = Properties::Create(&_properties);
+	properties_ = Properties::Create(_properties.type);
 
+	properties_->Set(&_properties);
 	INFO(this, "The endpoint[%s] was created.", properties_->id.c_str());
 }
 
@@ -440,8 +400,9 @@ Endpoint::Endpoint
 )
 :	activation_(false)
 {
-	properties_ = Properties::Create(_properties);
+	properties_ = Properties::Create(_properties->type);
 
+	properties_->Set(_properties);
 	INFO(this, "The endpoint[%s] was created.", properties_->id.c_str());
 }
 

@@ -55,7 +55,7 @@ RetValue	ShellCommandEndpoint
 						uint32_t	index = 4;
 						while(index < _count)
 						{
-							if (caseInsCompare(_arguments[index].c_str(), "--id"))
+							if (caseInsCompare(_arguments[index].c_str(), "-id"))
 							{
 								if(index+1 < _count)
 								{
@@ -69,7 +69,7 @@ RetValue	ShellCommandEndpoint
 
 								index += 2;
 							}
-							else if (caseInsCompare(_arguments[index].c_str(), "--name"))
+							else if (caseInsCompare(_arguments[index].c_str(), "-name"))
 							{
 								if(index+1 < _count)
 								{
@@ -83,7 +83,7 @@ RetValue	ShellCommandEndpoint
 
 								index += 2;
 							}
-							else if (caseInsCompare(_arguments[index].c_str(), "--index"))
+							else if (caseInsCompare(_arguments[index].c_str(), "-index"))
 							{
 								if(index+1 < _count)
 								{
@@ -368,9 +368,9 @@ ShellCommand<ObjectManager>	object_manager_command_endpoint =
 				"COMMANDS:\n"
 				"\tcreate <TYPE> <DEVICE_ID> [OPTIONS]\n"
 				"OPTIONS:\n"
-				"\t--id <ID>\n"
+				"\t-id <ID>\n"
 				"\t\tUnique identifier\n"
-				"\t--name <NAME>\n"
+				"\t-name <NAME>\n"
 				"\t\tName\n"
 				"PARAMETERS:\n"
 				"\tTYPE\tEndpoint type.\n"

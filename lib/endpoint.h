@@ -31,9 +31,7 @@ public:
 
 	struct Properties
 	{
-					Properties(Type _type = UNKNOWN);
-//					Properties(const Properties& _properties);
-//					Properties(const Properties* _properties);
+					Properties(Type _type);
 		virtual		~Properties();
 
 		static
@@ -62,7 +60,7 @@ public:
 		RetValue	SetProperty(const std::string& _name, double	_value);
 	
 		virtual
-		uint32		GetOptionsSize()	{	return	0;	};
+		uint32		GetOptionsSize();
 		virtual
 		uint32		GetOptions(uint8_t *options, uint32 options_len);
 
@@ -74,12 +72,6 @@ public:
 		bool		enable;
 		uint32		update_interval;
 		uint32		value_count;	
-	};
-
-	class	PropertiesList : public std::list<Properties*>
-	{
-	public:
-		~PropertiesList();
 	};
 
 					Endpoint(Type _type);
