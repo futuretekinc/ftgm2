@@ -4,33 +4,12 @@ using namespace std;
 
 EndpointControl::Properties::Properties
 (
-	const Properties& _properties
-)
-: Endpoint::Properties(_properties)
-{
-}
-
-EndpointControl::Properties::Properties
-(
-	const Properties* _properties
-)
-: Endpoint::Properties(_properties)
-{
-}
-
-EndpointControl::Properties::Properties
-(
-	const JSONNode& _node
+	Type _type
 ) 
+: Endpoint::Properties(_type) 
 {
-	Set(_node);
 }
 
-
-EndpointControl::Properties*	EndpointControl::Properties::Duplicate()
-{
-	return	new	Properties(this);
-}
 //////////////////////////////////////////////////////////////////////////
 // Control endpoint
 //////////////////////////////////////////////////////////////////////////
@@ -58,6 +37,7 @@ EndpointControl::EndpointControl
 	min_value_	= 0;
 }
 
+#if 0
 EndpointControl::EndpointControl
 (
 	const Properties& _properties
@@ -79,7 +59,7 @@ EndpointControl::EndpointControl
 	max_value_	= _properties->options.max_value;
 	min_value_	= _properties->options.min_value;
 }
-
+#endif
 EndpointControl::~EndpointControl()
 {
 }

@@ -27,10 +27,12 @@ public:
 	bool		IsDeviceExist(const std::string& _id);
 	uint32_t	GetDeviceCount();
 	RetValue	GetDeviceProperties(uint32_t _index, uint32_t _count, std::list<Device::Properties*>& _list);
-	RetValue	SetDeviceProperties(Device::Properties *_properties);
+	Device::Properties*	GetDeviceProperties(const std::string& _id);
 
-	RetValue	SetDeviceName(const std::string& _id, const std::string &_name);
-	RetValue	SetDeviceEnable(const std::string& _id, bool enable);
+	RetValue	SetDeviceProperties(Device::Properties *_properties);
+	RetValue	SetDeviceProperty(const std::string& _id, const std::string& _field, const std::string& _value);
+	RetValue	SetDeviceProperty(const std::string& _id, const std::string& _field, uint32_t _value);
+	RetValue	SetDeviceProperty(const std::string& _id, const std::string& _field, bool _value);
 
 	RetValue	CreateEndpointTable();
 	RetValue	AddEndpoint(Endpoint::Properties* _properties);
@@ -38,7 +40,12 @@ public:
 	bool		IsEndpointExist(const std::string& _id);
 	uint32_t	GetEndpointCount();
 	RetValue	GetEndpointProperties(uint32_t _index, uint32_t _count, std::list<Endpoint::Properties*>& _list);
+	Endpoint::Properties*	GetEndpointProperties(const std::string& _id);
+
 	RetValue	SetEndpointProperties(Endpoint::Properties* _properties);
+	RetValue	SetEndpointProperty(const std::string& _id, const std::string& _field, const std::string& _value);
+	RetValue	SetEndpointProperty(const std::string& _id, const std::string& _field, uint32_t _value);
+	RetValue	SetEndpointProperty(const std::string& _id, const std::string& _field, bool _value);
 
 	RetValue	CreateValueTable(const std::string& _id);
 	RetValue	AddValue(const std::string& _id, TimedValue* _value_list, uint32_t _count);

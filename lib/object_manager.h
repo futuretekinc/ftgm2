@@ -32,9 +32,15 @@ public:
 	uint32		GetDeviceCount();
 	Device*		GetDevice(uint32 _index);
 	Device*		GetDevice(const std::string& _id);
-	RetValue	SetDeviceName(const std::string& _id, const std::string& _name);
-	RetValue	SetDeviceEnable(const std::string& _id, bool _enable);
+
+	virtual
+	RetValue	SetDeviceProperty(const std::string& _id, const std::string& _field, const std::string& _value);
+	virtual
+	RetValue	SetDeviceProperty(const std::string& _id, const std::string& _field, bool _value);
+	virtual
+	RetValue	SetDeviceProperty(const std::string& _id, const std::string& _field, uint32_t _value);
 	RetValue	SetDeviceActivation(const std::string& _id, bool _activation);
+
 	void		ShowDeviceList();
 
 	RetValue	CreateEndpoint(Endpoint::Properties *_properties);
@@ -43,9 +49,15 @@ public:
 	uint32		GetEndpointCount();
 	Endpoint*	GetEndpoint(uint32 _index);
 	Endpoint*	GetEndpoint(const std::string& _id);
-	RetValue	SetEndpointName(const std::string& _id, const std::string& _name);
-	RetValue	SetEndpointEnable(const std::string& _id, bool _enable);
+
+	virtual
+	RetValue	SetEndpointProperty(const std::string& _id, const std::string& _field, const std::string& _value);
+	virtual
+	RetValue	SetEndpointProperty(const std::string& _id, const std::string& _field, bool _value);
+	virtual
+	RetValue	SetEndpointProperty(const std::string& _id, const std::string& _field, uint32_t _value);
 	RetValue	SetEndpointActivation(const std::string& _id, bool _activation);
+
 	void		ShowEndpointList();
 
 	RetValue	Connect(DataManager* _data_manager);

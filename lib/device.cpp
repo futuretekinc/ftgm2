@@ -21,6 +21,7 @@ struct	Device::TypeInfo kDeviceTypeInfoList[] =
 	{ Device::TYPE_UNKNOWN, 	""		}
 };
 
+#if 0
 Device::Properties::Properties()
 {
 	ostringstream	buffer;
@@ -33,6 +34,7 @@ Device::Properties::Properties()
 	name	=	id;
 	enable	=	false;
 }
+#endif
 
 Device::Properties::Properties(Type _type)
 {
@@ -47,6 +49,7 @@ Device::Properties::Properties(Type _type)
 	enable	=	false;
 }
 
+#if 0
 Device::Properties::Properties
 (
 	const Properties& _properties
@@ -85,6 +88,7 @@ Device::Properties::Properties
 
 	Set(_node);
 }
+#endif
 
 Device::Properties::~Properties()
 {
@@ -102,7 +106,7 @@ Device::Properties*	Device::Properties::Create
 	case	Device::TYPE_FTE:	
 		{
 			INFO(NULL, "Device FTE properties created." );
-			properties = new DeviceFTE::Properties;
+			properties = new DeviceFTE::Properties();
 		}
 		break;
 
@@ -289,6 +293,51 @@ RetValue Device::Properties::Set
 	return	ret_value;
 }
 
+RetValue	Device::Properties::SetProperty
+(
+	const std::string& _name, 
+	uint32_t	_value
+)
+{
+	return	RET_VALUE_INVALID_FIELD;
+}
+
+RetValue	Device::Properties::SetProperty
+(
+	const std::string& _name, 
+	bool _value
+)
+{
+	if (_name == "enable")
+	{
+		enable = _value;	
+	}
+	else
+	{
+		return	RET_VALUE_INVALID_FIELD;
+	}
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	Device::Properties::SetProperty
+(
+	const std::string& _name, 
+	const std::string& _value
+)
+{
+	if (_name == "name")
+	{
+		name = _value;	
+	}
+	else
+	{
+		return	RET_VALUE_INVALID_FIELD;
+	}
+
+	return	RET_VALUE_OK;
+}
+
 Device::PropertiesList::~PropertiesList()
 {
 	list<Properties*>::iterator it = this->begin();
@@ -333,6 +382,38 @@ Device::~Device()
 	delete properties_;
 }
 
+Device::Type	Device::GetType()
+{
+	return	properties_->type;	
+}
+
+const 
+std::string&	Device::GetID()
+{	
+	return	properties_->id;	
+}
+
+const 
+std::string&	Device::GetName()
+{
+	return	properties_->name;	
+}
+
+RetValue Device::SetName
+(
+	const string& _name
+)	
+{	
+	properties_->name = _name;	
+
+	return	RET_VALUE_OK;
+}
+
+bool	Device::GetEnable()
+{
+	return	properties_->enable;
+};
+
 RetValue 	Device::SetEnable
 (
 	bool _enable
@@ -341,11 +422,6 @@ RetValue 	Device::SetEnable
 	if (properties_->enable != _enable)
 	{
 		properties_->enable = _enable;
-
-		if (object_manager_ != NULL)
-		{
-			object_manager_->SaveDevice(this);
-		}
 
 		if (IsRun())
 		{
@@ -363,14 +439,79 @@ RetValue 	Device::SetEnable
 	return	RET_VALUE_OK;
 }
 
-RetValue Device::SetName
-(
-	const string& _name
-)	
-{	
-	properties_->name = _name;	
+bool		Device::GetActivation()
+{
+	return	activation_;	
+}
 
-	return	RET_VALUE_OK;
+RetValue	Device::SetActivation
+(
+	bool	_activation
+)
+{
+	if (_activation)
+	{
+		return	Activation();	
+	}
+	else
+	{
+		return	Deactivation();	
+	}
+}
+
+RetValue	Device::SetProperty
+(
+	const std::string& _name, 
+	const std::string& _value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (_name == "name")
+	{
+		ret_value = SetName(_value);
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_FIELD;
+		ERROR(this, ret_value, "Failed to set %s", _name.c_str());
+	}
+
+	return	ret_value;
+}
+
+RetValue	Device::SetProperty
+(
+	const std::string& _name, 
+	bool _value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (_name == "enable")
+	{
+		ret_value = SetEnable(_value);
+	}
+	else if (_name == "activation")
+	{
+		ret_value = SetActivation(_value);
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_FIELD;
+		ERROR(this, ret_value, "Failed to set %s", _name.c_str());
+	}
+
+	return	ret_value;
+}
+
+RetValue	Device::SetProperty
+(
+	const std::string& _name, 
+	uint32_t _value
+)
+{
+	return	RET_VALUE_INVALID_FIELD;
 }
 
 RetValue	Device::SetProperties
@@ -549,21 +690,6 @@ RetValue	Device::Deactivation()
 	}
 
 	return	ret_value;
-}
-
-RetValue	Device::SetActivation
-(
-	bool	_activation
-)
-{
-	if (_activation)
-	{
-		return	Activation();	
-	}
-	else
-	{
-		return	Deactivation();	
-	}
 }
 
 RetValue	Device::Connect
@@ -764,7 +890,7 @@ void Device::DeviceScheduleProcess
 				}
 				else
 				{
-					if (endpoint->IsActivated())
+					if (endpoint->GetActivation())
 					{
 						RetValue	ret_value;
 

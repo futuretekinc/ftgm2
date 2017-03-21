@@ -19,15 +19,15 @@ public:
 		std::string	peer;
 		std::string	community;
 
-					Properties(Type _type = TYPE_SNMP) : Device::Properties(_type){}
-					Properties(const JSONNode& _node);
+					Properties(Type _type = TYPE_SNMP);
+//					Properties(const JSONNode& _node);
 
 		RetValue 	Set(const JSONNode&	_node);
 		RetValue	Set(Kompex::SQLiteStatement*	_statement);
 
-		virtual
+		RetValue	SetProperty(const std::string& _name, const std::string& _value);
+
 		uint32		GetOptionsSize();
-		virtual
 		uint32		GetOptions(uint8_t *options, uint32 options_len);
 	};
 
@@ -35,7 +35,7 @@ public:
 					DeviceSNMP(Type _type);
 					~DeviceSNMP();
 
-	// Interface
+	// Attribute 
 	const 
 	std::string&	GetPeer();
 	void			SetPeer(const std::string& _peer);
@@ -44,6 +44,8 @@ public:
 	std::string&	GetCommunity();
 	void			SetCommunity(const std::string& _community);
 
+	RetValue		SetProperty(const std::string& _name, const std::string& _value);
+
 	RetValue		SetProperties(const Properties* _properties);
 	RetValue		SetProperties(const Properties& _properties);
 	RetValue 		SetProperties(Kompex::SQLiteStatement*	_statement);
@@ -51,8 +53,6 @@ public:
 
 	RetValue		GetEndpointValue(Endpoint* _endpoint);
 protected:
-	std::string		peer_;
-	std::string		community_;
 
 	SNMPSession		snmp_session_;
 

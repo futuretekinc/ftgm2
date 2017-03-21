@@ -21,6 +21,7 @@ SNMPSession::SNMPSession()
 	{
 		snmp_client_ = new SNMPClient;
 	}
+
 	snmp_client_->Append(this);
 }
 

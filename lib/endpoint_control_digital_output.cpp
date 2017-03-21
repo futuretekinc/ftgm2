@@ -7,6 +7,7 @@ EndpointControlDigitalOutput::Properties::Properties()
 {
 }
 
+#if 0
 EndpointControlDigitalOutput::Properties::Properties
 (
 	const JSONNode& _node
@@ -15,7 +16,7 @@ EndpointControlDigitalOutput::Properties::Properties
 {
 	type = DO_CONTROL;
 }
-
+#endif
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 // Digital Output Control endpoint
@@ -34,21 +35,5 @@ EndpointControlDigitalOutput::EndpointControlDigitalOutput
 {
 }
 
-EndpointControlDigitalOutput::EndpointControlDigitalOutput
-(
-	const Properties& _properties
-)
-:	EndpointControl(_properties)
-{
-}
-
-
-EndpointControlDigitalOutput::EndpointControlDigitalOutput
-(
-	const Properties* _properties
-)
-:	EndpointControl(_properties)
-{
-}
 
 

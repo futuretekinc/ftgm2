@@ -80,6 +80,21 @@ RetValue	ShellCommandDevice
 
 							index += 2;
 						}
+						else if (caseInsCompare(_arguments[index], "--peer"))
+						{
+							if(index+1 < _count)
+							{
+								properties->name = _arguments[index+1];	
+							}
+							else
+							{
+								ret_value = RET_VALUE_INVALID_ARGUMENTS;
+								_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
+								break;	
+							}
+
+							index += 2;
+						}
 						else
 						{
 							ret_value = RET_VALUE_INVALID_ARGUMENTS;
@@ -142,7 +157,7 @@ RetValue	ShellCommandDevice
 						}
 						else if (caseInsCompare(_arguments[2], "state"))
 						{
-							_shell->Out() << "The deive[" << _arguments[1] << "] state is " << (device->IsEnabled()?"enabled":"disabled") << endl;
+							_shell->Out() << "The deive[" << _arguments[1] << "] state is " << (device->GetEnable()?"enabled":"disabled") << endl;
 						}
 						else if (caseInsCompare(_arguments[2],"enable"))
 						{
@@ -189,7 +204,20 @@ RetValue	ShellCommandDevice
 					{
 						if (caseInsCompare(_arguments[2], "name"))
 						{
-							ret_value = object_manager->SetDeviceName(_arguments[1], _arguments[3]);
+							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], _arguments[3]);
+							if (ret_value == RET_VALUE_OK)
+							{
+								_shell->Out() << "The deive[" << _arguments[1] << "] name was changed to  " << _arguments[3] << endl;
+							}
+							else 
+							{
+								_shell->Out() << "Failed to change deive[" << _arguments[1] << "] name." << endl;
+							}
+						}
+
+						if (caseInsCompare(_arguments[2], "name"))
+						{
+							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], _arguments[3]);
 							if (ret_value == RET_VALUE_OK)
 							{
 								_shell->Out() << "The deive[" << _arguments[1] << "] name was changed to  " << _arguments[3] << endl;

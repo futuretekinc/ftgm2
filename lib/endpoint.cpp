@@ -24,6 +24,7 @@ struct	EndpointTypeInfo
 	{ Endpoint::UNKNOWN, 	""		}
 };
 
+#if 0
 Endpoint::Properties::Properties
 (
 	const Properties& _properties
@@ -53,19 +54,24 @@ Endpoint::Properties::Properties
 	update_interval = _properties->update_interval;
 	value_count 	= _properties->value_count;
 }
+#endif
 
 Endpoint::Properties::Properties
 (
-	Type _type
+	Type _type,
+	const string&	_id
 ) 
-: type(_type)
+: type(_type), id(_id)
 {
-	ostringstream	buffer;
-	Time			time = Time::GetCurrentTime();
+	if (id.length() == 0)
+	{
+		ostringstream	buffer;
+		Time			time = Time::GetCurrentTime();
 
-	buffer << time.Milliseconds();
+		buffer << time.Milliseconds();
 
-	id		=	"ep-" + buffer.str();
+		id		=	"ep-" + buffer.str();
+	}
 	index = 0;
 	name = "";
 	enable = false;
@@ -136,15 +142,13 @@ Endpoint::Properties*	Endpoint::Properties::Create
 		}
 	}
 
-	switch(type)
+	Endpoint::Properties*	properties = Create(type);
+	if (properties != NULL)
 	{
-	case	TEMPERATURE_SENSOR:	return	new	EndpointSensorTemperature::Properties(_node);
-	case	HUMIDITY_SENSOR:	return	new EndpointSensorHumidity::Properties(_node);
-	case	VOLTAGE_SENSOR: 	return	new EndpointSensorVoltage::Properties(_node);
-	case	DO_CONTROL:			return	new EndpointControlDigitalOutput::Properties(_node);
-	default	:
-		return	NULL;
+		properties->Set(_node);
 	}
+
+	return	properties;
 }
 
 RetValue Endpoint::Properties::Set
@@ -313,6 +317,79 @@ RetValue	Endpoint::Properties::Set
 	return	ret_value;
 }
 
+RetValue	Endpoint::Properties::SetProperty
+(
+	const std::string& _name, 
+	uint32_t	_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (_name == "update_interval")
+	{
+		update_interval = _value;	
+	}
+	else if (_name == "value_count")
+	{
+		value_count = _value;	
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_FIELD;
+	}
+
+	return	ret_value;
+}
+
+RetValue	Endpoint::Properties::SetProperty
+(
+	const std::string& _name, 
+	bool _value
+)
+{
+	if (_name == "enable")
+	{
+		enable = _value;	
+	}
+	else
+	{
+		return	RET_VALUE_INVALID_FIELD;
+	}
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	Endpoint::Properties::SetProperty
+(
+	const std::string& _name, 
+	const std::string& _value
+)
+{
+	if (_name == "name")
+	{
+		name = _value;	
+	}
+	else if (_name == "device_id")
+	{
+		device_id = _value;	
+	}
+	else
+	{
+		return	RET_VALUE_INVALID_FIELD;
+	}
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	Endpoint::Properties::SetProperty
+(
+	const std::string& _name, 
+	double	_value
+)
+{
+	return	RET_VALUE_INVALID_FIELD;
+}
+
 uint32	Endpoint::Properties::GetOptions
 (
 	uint8_t *options, 
@@ -397,9 +474,24 @@ RetValue Endpoint::SetName
 	return	RET_VALUE_OK;
 }
 
-bool		Endpoint::IsActivated()
+RetValue	Endpoint::SetIndex
+(
+	uint32_t _index
+)
 {
-	return	activation_;	
+	properties_->index = _index;
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	Endpoint::SetDeviceID
+(
+	const std::string& _device_id
+)
+{
+	properties_->device_id = _device_id;
+
+	return	RET_VALUE_OK;
 }
 
 RetValue	Endpoint::SetUpdateInterval
@@ -408,6 +500,21 @@ RetValue	Endpoint::SetUpdateInterval
 )
 {
 	properties_->update_interval = _interval;
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	Endpoint::SetMaxValueCount
+(
+	uint32 _count
+)
+{
+	properties_->value_count = _count;
+
+	while(value_list_.size() > properties_->value_count)
+	{
+		value_list_.pop_front();
+	}
 
 	return	RET_VALUE_OK;
 }
@@ -453,6 +560,86 @@ RetValue	Endpoint::SetEnable
 	return	ret_value;
 }
 
+RetValue	Endpoint::SetProperty
+(
+	const std::string& _name, 
+	const std::string& _value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (_name == "name")
+	{
+		properties_->name = _value;	
+	}
+	else if (_name == "device_id")
+	{
+		properties_->device_id = _value;	
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_FIELD;
+		ERROR(this, ret_value, "Failed to set %s", _name.c_str());
+	}
+
+	return	ret_value;
+}
+
+RetValue	Endpoint::SetProperty
+(
+	const std::string& _name, 
+	bool _value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (_name == "enable")
+	{
+		properties_->enable = _value;	
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_FIELD;
+		ERROR(this, ret_value, "Failed to set %s", _name.c_str());
+	}
+
+	return	ret_value;
+}
+
+RetValue	Endpoint::SetProperty
+(
+	const std::string& _name, 
+	uint32_t _value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	if (_name == "update_interval")
+	{
+		properties_->update_interval = _value;	
+	}
+	else if (_name == "value_count")
+	{
+		properties_->value_count = _value;	
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_FIELD;
+		ERROR(this, ret_value, "Failed to set %s", _name.c_str());
+	}
+
+	return	ret_value;
+}
+
+RetValue	Endpoint::SetProperty
+(
+	const std::string& _name, 
+	double	_value
+)
+{
+	return	RET_VALUE_INVALID_FIELD;
+}
+
 RetValue	Endpoint::Activation()
 {
 	RetValue 	ret_value = RET_VALUE_OK;
@@ -475,7 +662,7 @@ RetValue	Endpoint::Activation()
 				}
 				else
 				{
-					if (device->IsActivated())
+					if (device->GetActivation())
 					{
 						ret_value = device->Connect(properties_->id);
 						if (ret_value == RET_VALUE_OK)
@@ -555,18 +742,6 @@ RetValue	Endpoint::Synchronize()
 	return	device->GetEndpointValue(this);
 }
 
-void		Endpoint::SetMaxValueCount
-(
-	uint32 _count
-)
-{
-	properties_->value_count = _count;
-
-	while(value_list_.size() > properties_->value_count)
-	{
-		value_list_.pop_front();
-	}
-}
 
 Endpoint::Properties*	Endpoint::GetProperties()
 {
@@ -879,15 +1054,14 @@ Endpoint* 	Endpoint::Create
 )
 {
 	INFO(NULL, "Create Endpoint : id - %s, name - %s", properties->id.c_str(), properties->name.c_str());
-	switch(properties->type)
+	Endpoint* endpoint = Endpoint::Create(properties->type);
+
+	if (endpoint != NULL)
 	{
-	case	Endpoint::TEMPERATURE_SENSOR:	return	new	EndpointSensorTemperature((EndpointSensorTemperature::Properties*)properties);
-	case	Endpoint::HUMIDITY_SENSOR:		return	new EndpointSensorHumidity((EndpointSensorHumidity::Properties*)properties);
-	case	Endpoint::VOLTAGE_SENSOR: 		return	new EndpointSensorVoltage((EndpointSensorVoltage::Properties*)properties);
-	case	Endpoint::DO_CONTROL:			return	new EndpointControlDigitalOutput((EndpointControlDigitalOutput::Properties*)properties);
-	default	:
-		return	NULL;
+		endpoint->Set(properties);
 	}
+
+	return	endpoint;
 }
 
 ostream& operator<<

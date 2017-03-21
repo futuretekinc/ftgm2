@@ -10,14 +10,11 @@ class	DeviceFTE : public DeviceSNMP
 public:
 	struct	Properties : DeviceSNMP::Properties
 	{
-		Properties();
+		Properties(Type _type = TYPE_FTE);
 	};
 
 				DeviceFTE();
 				~DeviceFTE();
-
-	virtual	
-	RetValue	SetProperties (const JSONNode&	node);
 
 	virtual
 	RetValue	GetEndpointValue(Endpoint* _endpoint);

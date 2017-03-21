@@ -55,10 +55,11 @@ RetValue	SNMPClient::Append
 	if (it != session_list_.end())
 	{
 		ret_value = RET_VALUE_OBJECT_EXISTS;
-		ERROR(this, ret_value, "Peer already exist!");
+		ERROR(this, ret_value, "Peer[%s] already exist!", _session->GetPeer().c_str());
 		return	ret_value;	
 	}
 
+	INFO(this, "The SNMP session[%s] was added.", _session->GetPeer().c_str());
 	session_list_[_session->GetPeer()] = _session;
 	if (session_list_.size() > 0)
 	{

@@ -8,6 +8,7 @@ EndpointSensorHumidity::Properties::Properties()
 {
 }
 
+#if 0
 EndpointSensorHumidity::Properties::Properties
 (
 	const	Properties& _properties
@@ -32,11 +33,8 @@ EndpointSensorHumidity::Properties::Properties
 {
 	type = HUMIDITY_SENSOR;
 }
+#endif
 
-EndpointSensorHumidity::Properties*	EndpointSensorHumidity::Properties::Duplicate()
-{
-	return	new	Properties(this);
-}
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 // Humidity Sensor endpoint

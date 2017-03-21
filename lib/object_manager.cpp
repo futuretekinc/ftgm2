@@ -328,10 +328,11 @@ RetValue	ObjectManager::LoadDevice
 	return	ret_value;
 }
 
-RetValue	ObjectManager::SetDeviceName
+RetValue	ObjectManager::SetDeviceProperty
 (
 	const string& _id,
-	const string& _name
+	const string& _field,
+	const string& _value
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
@@ -344,24 +345,25 @@ RetValue	ObjectManager::SetDeviceName
 		return	ret_value;
 	}
 
-	ret_value = device->SetName(_name);
+	ret_value = device->SetProperty(_field, _value);
 	if (ret_value == RET_VALUE_OK)
 	{
-		ret_value = data_manager_->SetDeviceName(_id, _name);
+		ret_value = data_manager_->SetDeviceProperty(_id, _field, _value);
 	}
 
 	if (ret_value != RET_VALUE_OK)
 	{
-		ERROR(this, ret_value, "Failed to set device name!");	
+		ERROR(this, ret_value, "Failed to set device property[%s:%s]!", _field.c_str(), _value.c_str());	
 	}
 
 	return	ret_value;
 }
 
-RetValue	ObjectManager::SetDeviceEnable
+RetValue	ObjectManager::SetDeviceProperty
 (
 	const string& _id,
-	bool _enable
+	const string& _field,
+	bool		_value
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
@@ -374,7 +376,49 @@ RetValue	ObjectManager::SetDeviceEnable
 		return	ret_value;
 	}
 
-	return	device->SetEnable(_enable);
+	ret_value = device->SetProperty(_field, _value);
+	if (ret_value == RET_VALUE_OK)
+	{
+		ret_value = data_manager_->SetDeviceProperty(_id, _field, _value);
+	}
+
+	if (ret_value != RET_VALUE_OK)
+	{
+		ERROR(this, ret_value, "Failed to set device property[%s:%d]!", _field.c_str(), _value);	
+	}
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::SetDeviceProperty
+(
+	const string& 	_id,
+	const string& 	_field,
+	uint32_t		_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	Device*		device = GetDevice(_id);
+	if (device == NULL)
+	{
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+		ERROR(this, ret_value, "Failed to set device name!");
+		return	ret_value;
+	}
+
+	ret_value = device->SetProperty(_field, _value);
+	if (ret_value == RET_VALUE_OK)
+	{
+		ret_value = data_manager_->SetDeviceProperty(_id, _field, _value);
+	}
+
+	if (ret_value != RET_VALUE_OK)
+	{
+		ERROR(this, ret_value, "Failed to set device property[%s:%u]!", _field.c_str(), _value);	
+	}
+
+	return	ret_value;
 }
 
 RetValue	ObjectManager::SetDeviceActivation
@@ -435,7 +479,7 @@ void	ObjectManager::ShowDeviceList()
 		cout << setw(name_width) << it->second->GetName();
 		cout << " " << setw(id_width) << it->second->GetID();
 		cout << " " << setw(type_width) << Device::TypeToString(it->second->GetType());
-		if (it->second->IsEnabled())
+		if (it->second->GetEnable())
 		{
 			cout << " " << setw(enable_width) << "on";
 		}
@@ -444,7 +488,7 @@ void	ObjectManager::ShowDeviceList()
 			cout << " " << setw(enable_width) << "off";
 		}
 
-		if (it->second->IsActivated())
+		if (it->second->GetActivation())
 		{
 			cout << " " << setw(activation_width) << "on";
 		}
@@ -624,7 +668,7 @@ Endpoint*		ObjectManager::GetEndpoint
 	return	NULL;
 }
 
-Endpoint*		ObjectManager::GetEndpoint
+Endpoint*	ObjectManager::GetEndpoint
 (
 	const string& _id
 )
@@ -636,6 +680,99 @@ Endpoint*		ObjectManager::GetEndpoint
 	}		
 
 	return	NULL;
+}
+
+RetValue	ObjectManager::SetEndpointProperty
+(
+	const string& _id,
+	const string& _field,
+	const string& _value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	Endpoint*		endpoint = GetEndpoint(_id);
+	if (endpoint == NULL)
+	{
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+		ERROR(this, ret_value, "Failed to set endpoint name!");
+		return	ret_value;
+	}
+
+	ret_value = endpoint->SetProperty(_field, _value);
+	if (ret_value == RET_VALUE_OK)
+	{
+		ret_value = data_manager_->SetEndpointProperty(_id, _field, _value);
+	}
+
+	if (ret_value != RET_VALUE_OK)
+	{
+		ERROR(this, ret_value, "Failed to set endpoint property[%s:%s]!", _field.c_str(), _value.c_str());	
+	}
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::SetEndpointProperty
+(
+	const string& _id,
+	const string& _field,
+	bool		_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	Endpoint*		endpoint = GetEndpoint(_id);
+	if (endpoint == NULL)
+	{
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+		ERROR(this, ret_value, "Failed to set endpoint name!");
+		return	ret_value;
+	}
+
+	ret_value = endpoint->SetProperty(_field, _value);
+	if (ret_value == RET_VALUE_OK)
+	{
+		ret_value = data_manager_->SetEndpointProperty(_id, _field, _value);
+	}
+
+	if (ret_value != RET_VALUE_OK)
+	{
+		ERROR(this, ret_value, "Failed to set endpoint property[%s:%d]!", _field.c_str(), _value);	
+	}
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::SetEndpointProperty
+(
+	const string& 	_id,
+	const string& 	_field,
+	uint32_t		_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	Endpoint*		endpoint = GetEndpoint(_id);
+	if (endpoint == NULL)
+	{
+		ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+		ERROR(this, ret_value, "Failed to set endpoint name!");
+		return	ret_value;
+	}
+
+	ret_value = endpoint->SetProperty(_field, _value);
+	if (ret_value == RET_VALUE_OK)
+	{
+		ret_value = data_manager_->SetEndpointProperty(_id, _field, _value);
+	}
+
+	if (ret_value != RET_VALUE_OK)
+	{
+		ERROR(this, ret_value, "Failed to set endpoint property[%s:%u]!", _field.c_str(), _value);	
+	}
+
+	return	ret_value;
 }
 
 RetValue	ObjectManager::LoadEndpoint
@@ -973,7 +1110,7 @@ void	ObjectManager::ShowEndpointList()
 
 		cout << " " << setw(index_width) << endpoint->GetIndex();
 
-		if (endpoint->IsEnabled())
+		if (endpoint->GetEnabled())
 		{
 			cout << " " << setw(enable_width) << "on";
 		}
@@ -982,7 +1119,7 @@ void	ObjectManager::ShowEndpointList()
 			cout << " " << setw(enable_width) << "off";
 		}
 
-		if (endpoint->IsActivated())
+		if (endpoint->GetActivation())
 		{
 			cout << " " << setw(activation_width) << "on";
 		}

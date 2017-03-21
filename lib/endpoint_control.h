@@ -14,21 +14,15 @@ public:
 	
 	struct Properties : Endpoint::Properties
 	{
-		Properties(const Properties& _properties);
-		Properties(const Properties* _properties);
-		Properties(Type _type = UNKNOWN) : Endpoint::Properties(_type) {};
-		Properties(const JSONNode& _node);
-
-		virtual
-		Properties*	Duplicate();
+		Properties(Type _type = UNKNOWN);
 
 		Options	options;
 	};
 
 	EndpointControl(Type _type);
 	EndpointControl(Type _type, const std::string& _id);
-	EndpointControl(const Properties& _properties);
-	EndpointControl(const Properties* _properties);
+//	EndpointControl(const Properties& _properties);
+//	EndpointControl(const Properties* _properties);
 	~EndpointControl();
 
 	double	GetValue()		{	return	value_;	}

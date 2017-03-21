@@ -12,6 +12,7 @@ EndpointSensor::Properties::Properties
 {
 }
 
+#if 0
 EndpointSensor::Properties::Properties
 (
 	const Properties& _properties
@@ -39,6 +40,8 @@ EndpointSensor::Properties::Properties
 {
 	Set(_node);
 }
+
+#endif
 
 RetValue EndpointSensor::Properties::Set
 (
@@ -126,6 +129,30 @@ RetValue EndpointSensor::Properties::Set
 	ret_value;
 }
 
+RetValue	EndpointSensor::Properties::SetProperty
+(
+	const std::string& _name, 
+	double	_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;	
+
+	if (_name == "min_value")
+	{
+		options.min_value = _value;
+	}
+	else if (_name == "max_value")
+	{
+		options.max_value = _value;
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_FIELD;	
+	}
+
+	return	ret_value;
+}
+
 uint32	EndpointSensor::Properties::GetOptionsSize()
 {
 	return	sizeof(options);
@@ -157,8 +184,8 @@ EndpointSensor::EndpointSensor
 :	Endpoint(_type)
 {
 	value_		= 0;
-	max_value_	= 0;
-	min_value_	= 0;
+	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.max_value	= 0;
+	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.min_value	= 0;
 }
 
 EndpointSensor::EndpointSensor
@@ -168,8 +195,8 @@ EndpointSensor::EndpointSensor
 :	Endpoint(_properties)
 {
 	value_	= 0;
-	max_value_	= _properties.options.max_value;
-	min_value_	= _properties.options.min_value;
+	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.max_value	= _properties.options.max_value;
+	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.min_value	= _properties.options.min_value;
 }
 
 EndpointSensor::EndpointSensor
@@ -179,8 +206,8 @@ EndpointSensor::EndpointSensor
 :	Endpoint(_properties)
 {
 	value_	= 0;
-	max_value_	= _properties->options.max_value;
-	min_value_	= _properties->options.min_value;
+	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.max_value	= _properties->options.max_value;
+	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.min_value	= _properties->options.min_value;
 }
 
 EndpointSensor::EndpointSensor
@@ -191,11 +218,65 @@ EndpointSensor::EndpointSensor
 :	Endpoint(_type, _id)
 {
 	value_	= 0;
-	max_value_	= 0;
-	min_value_	= 0;
+	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.max_value	= 0;
+	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.min_value	= 0;
 }
 
 EndpointSensor::~EndpointSensor()
 {
 }
 
+RetValue	EndpointSensor::SetProperty
+(
+	const std::string& _name, 
+	double	_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;	
+	Properties	*properties = dynamic_cast<EndpointSensor::Properties*>(properties_);
+
+	if (_name == "min_value")
+	{
+		properties->options.min_value = _value;
+	}
+	else if (_name == "max_value")
+	{
+		properties->options.max_value = _value;
+	}
+	else
+	{
+		ret_value = Endpoint::SetProperty(_name, _value);
+	}
+
+	return	ret_value;
+}
+
+double	EndpointSensor::GetValue()
+{
+	return	value_;	
+}
+
+double	EndpointSensor::SetValue(double _value)	
+{
+	return	value_ = _value;	
+}
+
+double	EndpointSensor::GetMaxValue()	
+{
+	return	dynamic_cast<EndpointSensor::Properties *>(properties_)->options.max_value;	
+}
+
+double	EndpointSensor::SetMaxValue(double _value)
+{
+	return	dynamic_cast<EndpointSensor::Properties *>(properties_)->options.max_value = _value;	
+}
+
+double	EndpointSensor::GetMinValue()
+{
+	return	dynamic_cast<EndpointSensor::Properties *>(properties_)->options.min_value;	
+}
+
+double	EndpointSensor::SetMinValue(double _value)
+{
+	return	dynamic_cast<EndpointSensor::Properties *>(properties_)->options.min_value = _value;	
+}

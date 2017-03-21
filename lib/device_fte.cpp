@@ -9,8 +9,8 @@ SNMPObject::OID	fte_oid_temperature;
 static	uint32_t	_OID_map_reference_count = 0;	
 static map<string, SNMPObject *>	_OID_map;
 
-DeviceFTE::Properties::Properties()
-: DeviceSNMP::Properties(TYPE_FTE)
+DeviceFTE::Properties::Properties(Type _type)
+: DeviceSNMP::Properties(_type)
 {
 	if (_OID_map_reference_count == 0)
 	{
@@ -39,32 +39,6 @@ DeviceFTE::~DeviceFTE()
 			_OID_map.erase(it);	
 		}
 	}
-}
-
-RetValue	DeviceFTE::SetProperties
-(
-	const	JSONNode&	node
-)
-{
-	RetValue	retval(RET_VALUE_OK);
-
-	if (node.type() == JSON_NODE)
-	{
-		for(size_t i = 0 ; i < node.size() ; i++)
-		{
-			retval = SetProperties(node[i]);
-			if (retval != RET_VALUE_OK)
-			{
-				break;	
-			}
-		}
-	}
-	else 
-	{
-		retval = DeviceSNMP::SetProperties(node);	
-	}
-
-	return	retval;
 }
 
 RetValue	DeviceFTE::GetEndpointValue

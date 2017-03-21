@@ -394,10 +394,65 @@ RetValue	DataManager::GetDeviceProperties
 	return	ret_value;
 }
 
-RetValue	DataManager::SetDeviceName
+Device::Properties*	DataManager::GetDeviceProperties
+(
+	const string& _id
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+	Device::Properties* properties = NULL;
+
+	if (statement_ != NULL)
+	{
+		if (IsTableExist("devices"))
+		{
+			ostringstream	query;
+
+			query << "SELECT * FROM devices WHERE _id = " << _id << ";";
+			INFO(this, "Query : %s", query.str().c_str());
+
+			try 
+			{
+				statement_->Sql(query.str());
+				if (statement_->FetchRow())
+				{
+					Device::Type type = (Device::Type)statement_->GetColumnInt("_type");
+
+					properties = Device::Properties::Create(type);
+					if (properties != NULL)
+					{
+						ret_value = properties->Set(statement_);
+						if (ret_value != RET_VALUE_OK)
+						{
+							delete properties;	
+						}
+					}
+
+				}
+
+				statement_->FreeQuery();
+			}
+			catch(SQLiteException &exception)
+			{
+				ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+				ERROR(this, ret_value, "Failed to get device properties");
+			}
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	properties;
+}
+
+RetValue	DataManager::SetDeviceProperty
 (
 	const string&	_device_id,
-	const string&	_name
+	const string&	_field,
+	const string&	_value
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
@@ -407,7 +462,7 @@ RetValue	DataManager::SetDeviceName
 	{
 		ostringstream	query;
 
-		query << "UPDATE devices SET _name =\'" << _name << "\' WHERE _id=\'" << _device_id << "\'";
+		query << "UPDATE devices SET _" << _field << "=\'" << _value << "\' WHERE _id=\'" << _device_id << "\'";
 		INFO(this, "Query : %s", query.str().c_str());
 		try 
 		{
@@ -428,10 +483,11 @@ RetValue	DataManager::SetDeviceName
 	return	ret_value;
 }
 
-RetValue	DataManager::SetDeviceEnable
+RetValue	DataManager::SetDeviceProperty
 (
 	const string&	_device_id,
-	bool	_enable
+	const string&	_field,
+	bool	_value
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
@@ -441,7 +497,42 @@ RetValue	DataManager::SetDeviceEnable
 	{
 		ostringstream	query;
 
-		query << "UPDATE devices SET _enable=" << _enable << " WHERE _id=\'" << _device_id << "\'";
+		query << "UPDATE devices SET _" << _field << "=" << _value << " WHERE _id=\'" << _device_id << "\'";
+		INFO(this, "Query : %s", query.str().c_str());
+		try 
+		{
+			statement_->SqlStatement(query.str());
+		}
+		catch(SQLiteException &exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to update device enable - %s", exception.GetString().c_str());
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	ret_value;
+}
+
+RetValue	DataManager::SetDeviceProperty
+(
+	const string&	_device_id,
+	const string&	_field,
+	uint32_t		_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	INFO(this, "Set a device[%s] enable", _device_id.c_str());
+	if (statement_ != NULL)
+	{
+		ostringstream	query;
+
+		query << "UPDATE devices SET _" << _field << "=" << _value << " WHERE _id=\'" << _device_id << "\'";
 		INFO(this, "Query : %s", query.str().c_str());
 		try 
 		{
@@ -713,6 +804,60 @@ RetValue	DataManager::GetEndpointProperties
 	return	ret_value;
 }
 
+Endpoint::Properties*	DataManager::GetEndpointProperties
+(
+	const string& _id
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+	Endpoint::Properties* properties = NULL;
+
+	if (statement_ != NULL)
+	{
+		if (IsTableExist("endpoints"))
+		{
+			ostringstream	query;
+
+			query << "SELECT * FROM endpoints WHERE _id = " << _id << ";";
+			INFO(this, "Query : %s", query.str().c_str());
+
+			try 
+			{
+				statement_->Sql(query.str());
+				if (statement_->FetchRow())
+				{
+					Endpoint::Type type = (Endpoint::Type)statement_->GetColumnInt("_type");
+
+					properties = Endpoint::Properties::Create(type);
+					if (properties != NULL)
+					{
+						ret_value = properties->Set(statement_);
+						if (ret_value != RET_VALUE_OK)
+						{
+							delete properties;	
+						}
+					}
+
+				}
+
+				statement_->FreeQuery();
+			}
+			catch(SQLiteException &exception)
+			{
+				ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+				ERROR(this, ret_value, "Failed to get endpoint properties");
+			}
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	properties;
+}
+
 RetValue	DataManager::SetEndpointProperties
 (
 	Endpoint::Properties* _properties
@@ -800,6 +945,110 @@ RetValue	DataManager::SetEndpointProperties
 	return	ret_value;
 }
 
+RetValue	DataManager::SetEndpointProperty
+(
+	const string&	_endpoint_id,
+	const string&	_field,
+	const string&	_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	INFO(this, "Set a endpoint[%s] name", _endpoint_id.c_str());
+	if (statement_ != NULL)
+	{
+		ostringstream	query;
+
+		query << "UPDATE endpoints SET _" << _field << "=\'" << _value << "\' WHERE _id=\'" << _endpoint_id << "\'";
+		INFO(this, "Query : %s", query.str().c_str());
+		try 
+		{
+			statement_->SqlStatement(query.str());
+		}
+		catch(SQLiteException &exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to update endpoint name - %s", exception.GetString().c_str());
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	ret_value;
+}
+
+RetValue	DataManager::SetEndpointProperty
+(
+	const string&	_endpoint_id,
+	const string&	_field,
+	bool	_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	INFO(this, "Set a endpoint[%s] enable", _endpoint_id.c_str());
+	if (statement_ != NULL)
+	{
+		ostringstream	query;
+
+		query << "UPDATE endpoints SET _" << _field << "=" << _value << " WHERE _id=\'" << _endpoint_id << "\'";
+		INFO(this, "Query : %s", query.str().c_str());
+		try 
+		{
+			statement_->SqlStatement(query.str());
+		}
+		catch(SQLiteException &exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to update endpoint enable - %s", exception.GetString().c_str());
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	ret_value;
+}
+
+RetValue	DataManager::SetEndpointProperty
+(
+	const string&	_endpoint_id,
+	const string&	_field,
+	uint32_t		_value
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	INFO(this, "Set a endpoint[%s] enable", _endpoint_id.c_str());
+	if (statement_ != NULL)
+	{
+		ostringstream	query;
+
+		query << "UPDATE endpoints SET _" << _field << "=" << _value << " WHERE _id=\'" << _endpoint_id << "\'";
+		INFO(this, "Query : %s", query.str().c_str());
+		try 
+		{
+			statement_->SqlStatement(query.str());
+		}
+		catch(SQLiteException &exception)
+		{
+			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
+			ERROR(this, ret_value, "Failed to update endpoint enable - %s", exception.GetString().c_str());
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_DB_NOT_INITIALIZED;	
+		ERROR(this, ret_value, "DB not initialized.");
+	}
+
+	return	ret_value;
+}
 
 RetValue	DataManager::CreateValueTable
 (

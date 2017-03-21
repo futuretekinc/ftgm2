@@ -40,10 +40,10 @@ public:
 
 		std::list<std::string>	endpoint_list;
 
-					Properties();
+					//Properties();
 					Properties(Type _type);
-					Properties(const Properties& _properties);
-					Properties(const JSONNode&	node);
+					//Properties(const Properties& _properties);
+					//Properties(const JSONNode&	node);
 		virtual		~Properties();
 
 		static
@@ -54,6 +54,12 @@ public:
 		virtual
 		RetValue	Set(const JSONNode&	node);
 		RetValue	Set(Kompex::SQLiteStatement*	_statement);
+		virtual
+		RetValue	SetProperty(const std::string& _name, const std::string& _value);
+		virtual
+		RetValue	SetProperty(const std::string& _name, bool  _value);
+		virtual
+		RetValue	SetProperty(const std::string& _name, uint32_t	_value);
 
 		virtual
 		uint32		GetOptionsSize()	{	return	0;	};
@@ -71,16 +77,29 @@ public:
 					Device(Type _type);
 	virtual			~Device();
 	
-	// Interface 
-	Type			GetType()	{	return	properties_->type;	};
+	// Attribute
+	Type			GetType();
 	const 
-	std::string&	GetID()		{	return	properties_->id;	};
+	std::string&	GetID();
 	const 
-	std::string&	GetName()	{	return	properties_->name;	};
+	std::string&	GetName();
 	RetValue		SetName(const std::string& _name);
 
-	bool			IsEnabled()	{	return	properties_->enable;};
+	bool			GetEnable();
 	RetValue		SetEnable(bool _enable);
+
+	bool			GetActivation();
+	RetValue		SetActivation(bool _activation);
+
+	virtual
+	RetValue		SetProperty(const std::string& _name, const std::string& _value);
+	virtual
+	RetValue		SetProperty(const std::string& _name, bool  _value);
+	virtual
+	RetValue		SetProperty(const std::string& _name, uint32_t	_value);
+
+	virtual 
+	Properties*		GetProperties();
 
 	virtual
 	RetValue		SetProperties(const Properties& _properties);
@@ -91,14 +110,10 @@ public:
 	virtual	
 	RetValue		SetProperties (const JSONNode&	node);
 
-	virtual 
-	Properties*		GetProperties();
 
 	// Operator
 	RetValue		Activation();
 	RetValue		Deactivation();
-	RetValue		SetActivation(bool _activation);
-	bool			IsActivated()	{	return	activation_;	};
 
 
 	RetValue		Connect(const std::string& _endpoint_id);

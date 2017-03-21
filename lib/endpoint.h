@@ -32,8 +32,8 @@ public:
 	struct Properties
 	{
 					Properties(Type _type = UNKNOWN);
-					Properties(const Properties& _properties);
-					Properties(const Properties* _properties);
+//					Properties(const Properties& _properties);
+//					Properties(const Properties* _properties);
 		virtual		~Properties();
 
 		static
@@ -51,6 +51,15 @@ public:
 		RetValue	Set(const Properties* _properties);
 		virtual
 		RetValue	Set(const Kompex::SQLiteStatement*	_statement);
+
+		virtual
+		RetValue	SetProperty(const std::string& _name, const std::string& _value);
+		virtual
+		RetValue	SetProperty(const std::string& _name, bool  _value);
+		virtual
+		RetValue	SetProperty(const std::string& _name, uint32_t	_value);
+		virtual
+		RetValue	SetProperty(const std::string& _name, double	_value);
 	
 		virtual
 		uint32		GetOptionsSize()	{	return	0;	};
@@ -85,33 +94,48 @@ public:
 	Endpoint*		Create(const Properties* properties);
 
 	Type			GetType()	{	return	properties_->type;	};
+
 	const 
 	std::string&	GetID()		{	return	properties_->id;	};
+
 	const 
 	std::string&	GetName()	{	return	properties_->name;	};
-	const
-	uint32			GetIndex()	{	return	properties_->index;	};
 	const
 	RetValue		SetName(const std::string& _name);
 
 	const
-	std::string&	GetDeviceID()	{	return	properties_->device_id;	}
+	uint32			GetIndex()	{	return	properties_->index;	};
+	RetValue		SetIndex(uint32_t _index);
 
-	bool			IsEnabled()	{	return	properties_->enable;};
+	const
+	std::string&	GetDeviceID()	{	return	properties_->device_id;	}
+	RetValue		SetDeviceID(const std::string& _device_id);
+
+	bool			GetEnabled()	{	return	properties_->enable;};
 	RetValue		SetEnable(bool _enable);
 
 	uint32			GetUpdateInterval()	{	return	properties_->update_interval;}	;
 	RetValue		SetUpdateInterval(uint32	_interval);
 	
 	uint32			GetMaxValueCount()		{	return	properties_->value_count;	};
-	void			SetMaxValueCount(uint32 _count);
+	RetValue		SetMaxValueCount(uint32 _count);
+
+	virtual
+	RetValue		SetProperty(const std::string& _name, const std::string& _value);
+	virtual
+	RetValue		SetProperty(const std::string& _name, bool  _value);
+	virtual
+	RetValue		SetProperty(const std::string& _name, uint32_t	_value);
+	virtual
+	RetValue		SetProperty(const std::string& _name, double _value);
 
 	virtual
 	Properties*		GetProperties();
 
 	RetValue		Activation();
 	RetValue		Deactivation();
-	bool			IsActivated();
+
+	bool			GetActivation() { return	activation_;	};
 	RetValue		SetActivation(bool _activation);
 
 	virtual

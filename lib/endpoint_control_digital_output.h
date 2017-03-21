@@ -11,14 +11,10 @@ public:
 	struct	Properties : EndpointControl::Properties
 	{
 		Properties();
-		Properties(Kompex::SQLiteStatement*	_statement);
-		Properties(const JSONNode& _node);
 	};
 
 	EndpointControlDigitalOutput();
 	EndpointControlDigitalOutput(const std::string& _id);
-	EndpointControlDigitalOutput(const Properties& _properties);
-	EndpointControlDigitalOutput(const Properties* _properties);
 };
 
 #endif

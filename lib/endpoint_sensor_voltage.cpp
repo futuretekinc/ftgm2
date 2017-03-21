@@ -7,6 +7,7 @@ EndpointSensorVoltage::Properties::Properties()
 {
 }
 
+#if 0
 EndpointSensorVoltage::Properties::Properties
 (
 	const	Properties& _properties
@@ -36,6 +37,7 @@ EndpointSensorVoltage::Properties*	EndpointSensorVoltage::Properties::Duplicate(
 {
 	return	new	Properties(this);
 }
+#endif
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 // Voltage Sensor endpoint
