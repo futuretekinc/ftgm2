@@ -27,13 +27,4 @@ EndpointControlDigitalOutput::EndpointControlDigitalOutput()
 {
 }
 
-EndpointControlDigitalOutput::EndpointControlDigitalOutput
-(
-	const string& _id
-)
-:	EndpointControl(Endpoint::DO_CONTROL, _id)
-{
-}
-
-
 

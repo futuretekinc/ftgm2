@@ -16,14 +16,9 @@ public:
 	struct Properties : Endpoint::Properties
 	{
 		Properties(Type _type);
-//		Properties(const Properties& _properties);
-//		Properties(const Properties* _properties);
-//		Properties(const JSONNode& _node);
-
-		Properties*	Duplicate();
 
 		RetValue	Set(const JSONNode& _node);
-		RetValue	Set(const Properties* _properties);
+		RetValue	Set(const Endpoint::Properties* _properties);
 		RetValue	Set(const Kompex::SQLiteStatement*	_statement);
 
 		RetValue	SetProperty(const std::string& _name, double	_value);
@@ -35,9 +30,7 @@ public:
 	};
 
 				EndpointSensor(Type _type);
-				EndpointSensor(const Properties& _properties);
-				EndpointSensor(const Properties* _properties);
-				EndpointSensor(Type	_type,const std::string&	_id);
+				EndpointSensor(const Endpoint::Properties* _properties);
 				~EndpointSensor();
 
 	RetValue	SetProperty(const std::string& _name, double	_value);

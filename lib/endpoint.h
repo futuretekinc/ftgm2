@@ -94,25 +94,23 @@ public:
 	std::string&	GetID()		{	return	properties_->id;	};
 
 	const 
-	std::string&	GetName()	{	return	properties_->name;	};
-	const
+	std::string&	GetName();
 	RetValue		SetName(const std::string& _name);
 
-	const
-	uint32			GetIndex()	{	return	properties_->index;	};
+	uint32			GetIndex();
 	RetValue		SetIndex(uint32_t _index);
 
 	const
-	std::string&	GetDeviceID()	{	return	properties_->device_id;	}
+	std::string&	GetDeviceID();
 	RetValue		SetDeviceID(const std::string& _device_id);
 
-	bool			GetEnabled()	{	return	properties_->enable;};
+	bool			GetEnabled();
 	RetValue		SetEnable(bool _enable);
 
-	uint32			GetUpdateInterval()	{	return	properties_->update_interval;}	;
+	uint32			GetUpdateInterval();
 	RetValue		SetUpdateInterval(uint32	_interval);
 	
-	uint32			GetMaxValueCount()		{	return	properties_->value_count;	};
+	uint32			GetMaxValueCount();
 	RetValue		SetMaxValueCount(uint32 _count);
 
 	virtual
@@ -127,13 +125,13 @@ public:
 	virtual
 	Properties*		GetProperties();
 
-	RetValue		Activation();
-	RetValue		Deactivation();
-
-	bool			GetActivation() { return	activation_;	};
-	RetValue		SetActivation(bool _activation);
 
 	virtual
+	RetValue		Start();
+	RetValue        Stop();
+	
+	bool            IsRun() { return        activation_;    };
+
 	RetValue		Synchronize();
 
 	uint32			ValueCount();
@@ -163,9 +161,7 @@ protected:
 	void			ReleaseParent();
 
 	Properties*		properties_;
-
 	bool			activation_;
-
 	ObjectManager*	object_manager_;
 	std::list<TimedValue>	value_list_;
 };

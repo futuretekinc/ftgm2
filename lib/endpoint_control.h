@@ -20,18 +20,18 @@ public:
 	};
 
 	EndpointControl(Type _type);
-	EndpointControl(Type _type, const std::string& _id);
-//	EndpointControl(const Properties& _properties);
-//	EndpointControl(const Properties* _properties);
 	~EndpointControl();
 
-	double	GetValue()		{	return	value_;	}
+	double		GetValue();
 	virtual
-	double	SetValue(double _value)	{	return	value_ = _value;	}
-	double	GetMaxValue()	{	return	max_value_;	}
-	double	SetMaxValue(double _value)	{	return	max_value_ = _value;	}
-	double	GetMinValue()	{	return	min_value_;	}
-	double	SetMinValue(double _value)	{	return	min_value_ = _value;	}
+	RetValue	SetValue(double _value);
+	double		GetMaxValue();
+	virtual
+	RetValue	SetMaxValue(double _value);
+	double		GetMinValue();
+	virtual
+	RetValue	SetMinValue(double _value);
+
 private:
 	double	value_;
 	double	max_value_;

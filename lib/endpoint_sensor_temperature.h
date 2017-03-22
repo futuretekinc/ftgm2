@@ -12,17 +12,12 @@ public:
 	{
 		Properties();
 		Properties(Kompex::SQLiteStatement*	_statement);
-		Properties(const Properties& _properties);
 		Properties(const Properties* _properties);
 		Properties(const JSONNode& _node);
-
-		Properties* Duplicate();
 	};
 
-				EndpointSensorTemperature();
-				EndpointSensorTemperature(const std::string& _id);
-				EndpointSensorTemperature(const Properties& _properties);
-				EndpointSensorTemperature(const Properties* _properties);
+	EndpointSensorTemperature();
+	EndpointSensorTemperature(const Properties* _properties);
 
 };
 

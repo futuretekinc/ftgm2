@@ -50,7 +50,7 @@ RetValue	ShellCommandDevice
 				{
 					while(index < _count)
 					{
-						if (caseInsCompare(_arguments[index], "--id"))
+						if (IsCorrectOption(_arguments[index], "--id"))
 						{
 							if(index+1 < _count)
 							{
@@ -65,7 +65,7 @@ RetValue	ShellCommandDevice
 
 							index += 2;
 						}
-						else if (caseInsCompare(_arguments[index], "--name"))
+						else if (IsCorrectOption(_arguments[index], "--name"))
 						{
 							if(index+1 < _count)
 							{
@@ -80,7 +80,7 @@ RetValue	ShellCommandDevice
 
 							index += 2;
 						}
-						else if (caseInsCompare(_arguments[index], "--peer"))
+						else if (IsCorrectOption(_arguments[index], "--peer"))
 						{
 							if(index+1 < _count)
 							{
@@ -153,29 +153,43 @@ RetValue	ShellCommandDevice
 
 				case	3:
 					{
-						if (caseInsCompare(_arguments[2], "type"))
+						if (IsCorrectOption(_arguments[2], "type"))
 						{
 							_shell->Out() << "The deive[" << _arguments[1] << "] type is " << Device::TypeToString(device->GetType()) << endl;
 						}
-						else if (caseInsCompare(_arguments[2], "name"))
+						else if (IsCorrectOption(_arguments[2], "name"))
 						{
 							_shell->Out() << "The deive[" << _arguments[1] << "] name is " << device->GetName() << endl;
 						}
-						else if (caseInsCompare(_arguments[2], "state"))
+						else if (IsCorrectOption(_arguments[2], "state"))
 						{
 							_shell->Out() << "The deive[" << _arguments[1] << "] state is " << (device->GetEnable()?"enabled":"disabled") << endl;
 						}
-						else if (caseInsCompare(_arguments[2],"enable"))
+						else if (IsCorrectOption(_arguments[2],"enable"))
 						{
-							device->SetEnable(true);
-							_shell->Out() << "The device[" << _arguments[1] << "] is enabled." << endl;
+							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], true);
+							if (ret_value == RET_VALUE_OK)
+							{
+								_shell->Out() << "The device[" << _arguments[1] << "] is enabled." << endl;
+							}
+							else
+							{
+								_shell->Out() << "Error : Failed to enable the device[" << _arguments[1] << "]." << endl;
+							}
 						}
-						else if (caseInsCompare(_arguments[2], "disable"))
+						else if (IsCorrectOption(_arguments[2], "disable"))
 						{
-							device->SetEnable(false);
-							_shell->Out() << "The device[" << _arguments[1] << "] is disabled." << endl;
+							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], false);
+							if (ret_value == RET_VALUE_OK)
+							{
+								_shell->Out() << "The device[" << _arguments[1] << "] is disabled." << endl;
+							}
+							else
+							{
+								_shell->Out() << "Error : Failed to disable the device[" << _arguments[1] << "]." << endl;
+							}
 						}
-						else if (caseInsCompare(_arguments[2], "activate"))
+						else if (IsCorrectOption(_arguments[2], "activate"))
 						{
 							ret_value = object_manager->SetDeviceActivation(_arguments[1], true);
 							if (ret_value == RET_VALUE_OK)
@@ -184,10 +198,10 @@ RetValue	ShellCommandDevice
 							}
 							else
 							{
-								_shell->Out() << "The device[" << _arguments[1] << "] is failed to activation." << endl;
+								_shell->Out() << "Error : The device[" << _arguments[1] << "] is failed to activation." << endl;
 							}
 						}
-						else if (caseInsCompare(_arguments[2], "deactivate"))
+						else if (IsCorrectOption(_arguments[2], "deactivate"))
 						{
 							ret_value = object_manager->SetDeviceActivation(_arguments[1], false);
 							if (ret_value == RET_VALUE_OK)
@@ -208,7 +222,7 @@ RetValue	ShellCommandDevice
 
 				case	4:
 					{
-						if (caseInsCompare(_arguments[2], "name") || caseInsCompare(_arguments[2], "peer") || caseInsCompare(_arguments[2], "community"))
+						if (IsCorrectOption(_arguments[2], "name") || IsCorrectOption(_arguments[2], "peer") || IsCorrectOption(_arguments[2], "community"))
 						{
 							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], _arguments[3]);
 							if (ret_value == RET_VALUE_OK)

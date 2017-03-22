@@ -13,7 +13,7 @@ public:
 
 	MessageProcess();
 			
-	virtual	RetValue	Start(uint32_t _timeout = 5000, bool _sync = false);
+	virtual	RetValue	Start(uint32_t _timeout=5000, bool _sync=false);
 	virtual	RetValue	Stop();
 	virtual	bool		IsRun();
 

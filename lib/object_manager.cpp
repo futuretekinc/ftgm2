@@ -531,7 +531,14 @@ RetValue	ObjectManager::SetDeviceActivation
 		return	ret_value;
 	}
 
-	return	device->SetActivation(_activation);
+	if (_activation)
+	{
+		return	device->Start();
+	}
+	else
+	{
+		return	device->Stop();
+	}
 }
 
 void	ObjectManager::ShowDeviceList()
@@ -582,7 +589,7 @@ void	ObjectManager::ShowDeviceList()
 			cout << " " << setw(enable_width) << "off";
 		}
 
-		if (it->second->GetActivation())
+		if (it->second->IsRun())
 		{
 			cout << " " << setw(activation_width) << "on";
 		}
@@ -1115,7 +1122,7 @@ void	ObjectManager::OnMessage
 				{
 					INFO(this, "Endpoint[%s] : Device[%s]", endpoint_it->second->GetID().c_str(), endpoint_it->second->GetDeviceID().c_str());
 
-					endpoint_it->second->Activation();
+					endpoint_it->second->Start();
 				}
 			}
 			else
@@ -1131,7 +1138,7 @@ void	ObjectManager::OnMessage
 					{
 						if (endpoint_it->second->GetDeviceID() == ((MessageStart *)_message)->id)
 						{
-							endpoint_it->second->Activation();
+							endpoint_it->second->Start();
 						}
 					}
 				}
@@ -1152,7 +1159,7 @@ void	ObjectManager::OnMessage
 				auto endpoint_it = endpoint_map_.begin();
 				for(; endpoint_it != endpoint_map_.end(); endpoint_it++)
 				{
-					endpoint_it->second->Deactivation();
+					endpoint_it->second->Stop();
 				}
 			}
 			else
@@ -1168,7 +1175,7 @@ void	ObjectManager::OnMessage
 					{
 						if (endpoint_it->second->GetDeviceID() == ((MessageStart *)_message)->id)
 						{
-							endpoint_it->second->Deactivation();
+							endpoint_it->second->Stop();
 						}
 					}
 				}
@@ -1385,7 +1392,7 @@ void	ObjectManager::ShowEndpointList()
 			cout << " " << setw(enable_width) << "off";
 		}
 
-		if (endpoint->GetActivation())
+		if (endpoint->IsRun())
 		{
 			cout << " " << setw(activation_width) << "on";
 		}

@@ -25,41 +25,39 @@ EndpointControl::EndpointControl
 	min_value_	= 0;
 }
 
-EndpointControl::EndpointControl
-(
-	Type			_type,
-	const string&	_id
-)
-:	Endpoint(_type, _id)
-{
-	value_		= 0;
-	max_value_	= 0;
-	min_value_	= 0;
-}
-
-#if 0
-EndpointControl::EndpointControl
-(
-	const Properties& _properties
-)
-:	Endpoint(_properties)
-{
-	value_	= 0;
-	max_value_	= _properties.options.max_value;
-	min_value_	= _properties.options.min_value;
-}
-
-EndpointControl::EndpointControl
-(
-	const Properties* _properties
-)
-:	Endpoint(_properties)
-{
-	value_	= 0;
-	max_value_	= _properties->options.max_value;
-	min_value_	= _properties->options.min_value;
-}
-#endif
 EndpointControl::~EndpointControl()
 {
+}
+double	EndpointControl::GetValue()
+{	
+	return	value_;	
+}
+
+RetValue	EndpointControl::SetValue(double _value)
+{	
+	return	value_ = _value;
+}
+
+double	EndpointControl::GetMaxValue()
+{	
+	return	max_value_;	
+}
+
+RetValue	EndpointControl::SetMaxValue(double _value)	
+{	
+	max_value_ = _value;	
+	
+	return	RET_VALUE_OK;
+}
+
+double	EndpointControl::GetMinValue()	
+{	
+	return	min_value_;	
+}
+
+RetValue	EndpointControl::SetMinValue(double _value)	
+{	
+	min_value_ = _value;	
+
+	return	RET_VALUE_OK;
 }

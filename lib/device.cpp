@@ -1,4 +1,3 @@
-#include <iostream>
 #include <algorithm>
 #include <unistd.h>
 #include <cstdlib>
@@ -22,21 +21,6 @@ struct	Device::TypeInfo kDeviceTypeInfoList[] =
 	{ Device::TYPE_UNKNOWN, 	""		}
 };
 
-#if 0
-Device::Properties::Properties()
-{
-	ostringstream	buffer;
-	Time			time = Time::GetCurrentTime();
-
-	buffer << time.Microseconds();
-
-	type	=	TYPE_UNKNOWN;
-	id		=	"dev-" + buffer.str();
-	name	=	id;
-	enable	=	false;
-}
-#endif
-
 Device::Properties::Properties(Type _type)
 {
 	ostringstream	buffer;
@@ -49,47 +33,6 @@ Device::Properties::Properties(Type _type)
 	name	=	id;
 	enable	=	false;
 }
-
-#if 0
-Device::Properties::Properties
-(
-	const Properties& _properties
-)
-{
-	type	=	_properties.type;
-	id		=	_properties.id;
-	name	=	_properties.name;
-	enable	=	_properties.enable;
-
-	auto it = _properties.endpoint_list.cbegin();
-	while(it != _properties.endpoint_list.end())
-	{
-		endpoint_list.push_back(*it);
-
-		it++;
-	}
-}
-
-Device::Properties::Properties
-(
-	const JSONNode&	_node
-)
-{
-	ostringstream	buffer;
-	Time			time = Time::GetCurrentTime();
-
-	buffer << time.Microseconds();
-
-	INFO(NULL, "The Device properties created.");
-
-	type	= TYPE_UNKNOWN;
-	id		= "dev-" + buffer.str();
-	name	= id;
-	enable	= false;
-
-	Set(_node);
-}
-#endif
 
 Device::Properties::~Properties()
 {
@@ -355,8 +298,8 @@ Device::Device
 
 	properties_ = Properties::Create(_type);
 
-	activation_			= false;
 	schedule_thread_ 	= NULL;
+	schedule_stop_		= true;
 
 	INFO(this, "Device[%s] created.", properties_->id.c_str());
 }
@@ -409,40 +352,17 @@ RetValue 	Device::SetEnable
 	{
 		properties_->enable = _enable;
 
-		if (IsRun())
+		if (properties_->enable)
 		{
-			if (properties_->enable == true)
-			{
-				Activation();
-			}
-			else if (properties_->enable == false)
-			{
-				Deactivation();
-			}
+			Start();
+		}
+		else
+		{
+			Stop();
 		}
 	}	
 
 	return	RET_VALUE_OK;
-}
-
-bool		Device::GetActivation()
-{
-	return	activation_;	
-}
-
-RetValue	Device::SetActivation
-(
-	bool	_activation
-)
-{
-	if (_activation)
-	{
-		return	Activation();	
-	}
-	else
-	{
-		return	Deactivation();	
-	}
 }
 
 RetValue	Device::SetProperty
@@ -477,10 +397,6 @@ RetValue	Device::SetProperty
 	if (_name == "enable")
 	{
 		ret_value = SetEnable(_value);
-	}
-	else if (_name == "activation")
-	{
-		ret_value = SetActivation(_value);
 	}
 	else
 	{
@@ -591,7 +507,49 @@ Device::Properties*	Device::GetProperties()
 
 void	Device::PreProcess()
 {
-	Activation();
+	INFO(this, "Activation of the device[%s] has been requested.", properties_->id.c_str());
+	if (properties_->enable)
+	{
+		if (schedule_stop_)
+		{
+			schedule_thread_ = new thread(DeviceScheduleProcess, this);
+			if (schedule_thread_ == NULL)
+			{
+				ERROR(this, RET_VALUE_NOT_ENOUGH_MEMORY, "The device[%s] can not create schedule thread!", properties_->id.c_str());
+			}
+			else
+			{
+				INFO(this, "The device[%s]'s schedules thread has started.", properties_->id.c_str());
+
+				while(!schedule_thread_->joinable())
+				{
+					usleep(1000);
+				}
+			}
+		}
+		else
+		{
+			INFO(this, "The device[%s]'s scheduler already started.", properties_->id.c_str());	
+		}
+	}
+
+	if (schedule_stop_ == false)
+	{
+		for(auto it = properties_->endpoint_list.begin(); it != properties_->endpoint_list.end() ; it++)
+		{
+			Endpoint* endpoint;
+
+			endpoint = object_manager_->GetEndpoint(*it);	
+			if (endpoint != NULL)
+			{
+				endpoint->Start();	
+			}
+			else
+			{
+				ERROR(this, RET_VALUE_OBJECT_NOT_FOUND, "Failed to get endpoint[%s]", (*it).c_str());
+			}
+		}
+	}
 }
 
 void	Device::Process()
@@ -604,61 +562,12 @@ void	Device::PostProcess()
 	{
 		schedule_stop_ = true;
 
-		
 		schedule_thread_->join();
 
 		delete schedule_thread_;
 		schedule_thread_ = NULL;
 	}
 
-}
-
-RetValue	Device::Activation()
-{
-	RetValue	ret_value = RET_VALUE_OK;
-
-	if (properties_->enable)
-	{
-		if (!activation_)
-		{
-			schedule_thread_ = new thread(DeviceScheduleProcess, this);
-			if (schedule_thread_ == NULL)
-			{
-				ret_value = RET_VALUE_NOT_ENOUGH_MEMORY;
-				ERROR(this, ret_value, "The device[%s] can not be activated!", properties_->id.c_str());
-			}
-			else
-			{
-				while(!schedule_thread_->joinable())
-				{
-					usleep(1000);
-				}
-
-				INFO(this, "New thread[0x%08x] created." , schedule_thread_->get_id());
-				activation_ = true;
-			}
-		}
-	}
-	return	ret_value;
-}
-
-RetValue	Device::Deactivation()
-{
-	RetValue	ret_value = RET_VALUE_OK;
-
-	if (activation_)
-	{
-		schedule_stop_ = true;
-
-		schedule_thread_->join();
-
-		delete schedule_thread_;
-		schedule_thread_ = NULL;
-
-		activation_ = false;
-	}
-
-	return	ret_value;
 }
 
 RetValue	Device::Connect
@@ -740,43 +649,9 @@ void	Device::OnMessage
 	INFO(this, "Message Received[%s]", ToString(_message).c_str() );
 	switch(_message->type)
 	{
-	case	Message::TYPE_STARTED:
-		{
-			if (activation_)
-			{
-				Activation();	
-			}
-		}
-		break;
-
-	case	Message::TYPE_STOP:
-		{
-			if (activation_)
-			{
-				Deactivation();	
-			}
-		}
-		break;
-
 	default:
 		MessageProcess::OnMessage(_message);
 	}
-}
-
-void	Device::OnActivation
-(
-	Message *_message
-)
-{
-	Activation();
-}
-
-void	Device::OnDeactivation
-(
-	Message *_message
-)
-{
-	Deactivation();
 }
 
 void	Device::OnQuit
@@ -859,7 +734,7 @@ void Device::DeviceScheduleProcess
 				}
 				else
 				{
-					if (endpoint->GetActivation())
+					if (endpoint->IsRun())
 					{
 						RetValue	ret_value;
 
@@ -871,10 +746,6 @@ void Device::DeviceScheduleProcess
 
 						item->timer.Add(endpoint->GetUpdateInterval());
 						_device->endpoint_scheduler_.Push(item);
-					}
-					else
-					{
-						//INFO(NULL, "The endpoint[%s] is deactivated.", endpoint->GetID().c_str());
 					}
 				}
 			}

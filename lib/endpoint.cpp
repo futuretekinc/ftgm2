@@ -455,7 +455,12 @@ Endpoint::~Endpoint()
 	delete properties_;
 }
 
-const
+const 
+std::string&	Endpoint::GetName()
+{	
+	return	properties_->name;	
+}
+
 RetValue Endpoint::SetName
 (
 	const std::string& _name
@@ -464,6 +469,11 @@ RetValue Endpoint::SetName
 	properties_->name = _name; 
 
 	return	RET_VALUE_OK;
+}
+
+uint32		Endpoint::GetIndex()
+{	
+	return	properties_->index;	
 }
 
 RetValue	Endpoint::SetIndex
@@ -476,6 +486,12 @@ RetValue	Endpoint::SetIndex
 	return	RET_VALUE_OK;
 }
 
+const
+std::string&	Endpoint::GetDeviceID()
+{	
+	return	properties_->device_id;	
+}
+
 RetValue	Endpoint::SetDeviceID
 (
 	const std::string& _device_id
@@ -486,29 +502,9 @@ RetValue	Endpoint::SetDeviceID
 	return	RET_VALUE_OK;
 }
 
-RetValue	Endpoint::SetUpdateInterval
-(
-	uint32	_interval
-)
-{
-	properties_->update_interval = _interval;
-
-	return	RET_VALUE_OK;
-}
-
-RetValue	Endpoint::SetMaxValueCount
-(
-	uint32 _count
-)
-{
-	properties_->value_count = _count;
-
-	while(value_list_.size() > properties_->value_count)
-	{
-		value_list_.pop_front();
-	}
-
-	return	RET_VALUE_OK;
+bool		Endpoint::GetEnabled()
+{	
+	return	properties_->enable;
 }
 
 RetValue	Endpoint::SetEnable
@@ -531,11 +527,11 @@ RetValue	Endpoint::SetEnable
 		{
 			if (properties_->enable == true)
 			{
-				Activation();
+				Start();
 			}
 			else if (properties_->enable == false)
 			{
-				Deactivation();
+				Stop();
 			}
 
 			if (properties_->enable)
@@ -550,6 +546,41 @@ RetValue	Endpoint::SetEnable
 	}	
 
 	return	ret_value;
+}
+
+uint32		Endpoint::GetUpdateInterval()
+{	
+	return	properties_->update_interval;
+}
+
+RetValue	Endpoint::SetUpdateInterval
+(
+	uint32	_interval
+)
+{
+	properties_->update_interval = _interval;
+
+	return	RET_VALUE_OK;
+}
+
+uint32		Endpoint::GetMaxValueCount()
+{	
+	return	properties_->value_count;	
+}
+
+RetValue	Endpoint::SetMaxValueCount
+(
+	uint32 _count
+)
+{
+	properties_->value_count = _count;
+
+	while(value_list_.size() > properties_->value_count)
+	{
+		value_list_.pop_front();
+	}
+
+	return	RET_VALUE_OK;
 }
 
 RetValue	Endpoint::SetProperty
@@ -632,10 +663,11 @@ RetValue	Endpoint::SetProperty
 	return	RET_VALUE_INVALID_FIELD;
 }
 
-RetValue	Endpoint::Activation()
+RetValue	Endpoint::Start()
 {
 	RetValue 	ret_value = RET_VALUE_OK;
 
+	INFO(this, "Activation of the endpoint[%s] has been requested.", properties_->id.c_str());
 	if (properties_->enable)
 	{
 		if (!activation_)
@@ -654,12 +686,13 @@ RetValue	Endpoint::Activation()
 				}
 				else
 				{
-					if (device->GetActivation())
+					if (device->IsRun())
 					{
 						ret_value = device->Connect(properties_->id);
 						if (ret_value == RET_VALUE_OK)
 						{
 							activation_ = true;
+							INFO(this, "The endpoint[%s] was activated.", properties_->id.c_str());
 						}
 					}
 					else
@@ -674,10 +707,11 @@ RetValue	Endpoint::Activation()
 	return	ret_value;	
 }
 
-RetValue	Endpoint::Deactivation()
+RetValue	Endpoint::Stop()
 {
 	RetValue 	ret_value = RET_VALUE_OK;
 
+	INFO(this, "Deactivation of the endpoint[%s] has been requested.", properties_->id.c_str());
 	if (activation_)
 	{
 		if (object_manager_ == NULL)
@@ -698,6 +732,7 @@ RetValue	Endpoint::Deactivation()
 				if ((ret_value == RET_VALUE_OK) || (ret_value == RET_VALUE_OBJECT_NOT_FOUND))
 				{
 					activation_ = false;
+					INFO(this, "The endpoint[%s] was deactivated.", properties_->id.c_str());
 				}
 			}
 		}
@@ -706,25 +741,11 @@ RetValue	Endpoint::Deactivation()
 	return	ret_value;
 }
 
-RetValue	Endpoint::SetActivation
-(
-	bool	_activation
-)
-{
-	if (_activation)
-	{
-		return	Activation();	
-	}
-	else
-	{
-		return	Deactivation();	
-	}
-}
-
 RetValue	Endpoint::Synchronize()
 {
 	Device*	device;
-	
+
+	INFO(this, "The endpoint[%s] sync!", properties_->id.c_str());
 	device = object_manager_->GetDevice(properties_->device_id);
 	if (device == NULL)
 	{

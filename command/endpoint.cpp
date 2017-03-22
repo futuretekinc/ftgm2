@@ -159,7 +159,7 @@ RetValue	ShellCommandEndpoint
 						Endpoint*	endpoint = object_manager->GetEndpoint(i);
 						if (endpoint != NULL)
 						{
-							ret_value = endpoint->Activation();	
+							ret_value = endpoint->Start();	
 							if (ret_value == RET_VALUE_OK)
 							{
 								cout << "The endpoint[" << endpoint->GetID() << "] is activated." << endl;
@@ -185,7 +185,7 @@ RetValue	ShellCommandEndpoint
 					}
 					else
 					{
-						ret_value = endpoint->Activation();
+						ret_value = endpoint->Start();
 						if (ret_value == RET_VALUE_OK)
 						{
 							cout << "The endpoint[" << _arguments[2] << "] was activated.";
@@ -213,7 +213,7 @@ RetValue	ShellCommandEndpoint
 						Endpoint*	endpoint = object_manager->GetEndpoint(i);
 						if (endpoint != NULL)
 						{
-							ret_value = endpoint->Deactivation();	
+							ret_value = endpoint->Stop();	
 							if (ret_value == RET_VALUE_OK)
 							{
 								cout << "The endpoint[" << _arguments[2] << "] was deactivated.";
@@ -239,7 +239,7 @@ RetValue	ShellCommandEndpoint
 					}
 					else
 					{
-						ret_value = endpoint->Deactivation();
+						ret_value = endpoint->Stop();
 						if (ret_value == RET_VALUE_OK)
 						{
 							cout << "The endpoint[" << _arguments[2] << "] was deactivated.";
@@ -290,7 +290,7 @@ RetValue	ShellCommandEndpoint
 				}
 				else if (IsCorrectOption(_arguments[2], "enable"))
 				{
-					ret_value = endpoint->SetEnable(true);	
+					ret_value = object_manager->SetEndpointProperty(_arguments[1], _arguments[2], true);	
 					if (ret_value == RET_VALUE_OK)
 					{
 						cout << "The endpoint[" << endpoint->GetID() << "] is enabled." << endl;
@@ -302,7 +302,7 @@ RetValue	ShellCommandEndpoint
 				}
 				else if (IsCorrectOption(_arguments[2], "disable"))
 				{
-					ret_value = endpoint->SetEnable(false);	
+					ret_value = object_manager->SetEndpointProperty(_arguments[1], _arguments[2], false);	
 					if (ret_value == RET_VALUE_OK)
 					{
 						cout << "The endpoint[" << endpoint->GetID() << "] is disabled." << endl;
@@ -314,7 +314,7 @@ RetValue	ShellCommandEndpoint
 				}
 				else if (IsCorrectOption(_arguments[2], "activate"))
 				{
-					ret_value = endpoint->Activation();	
+					ret_value = endpoint->Start();	
 					if (ret_value == RET_VALUE_OK)
 					{
 						cout << "The endpoint[" << endpoint->GetID() << "] is activated." << endl;
@@ -326,7 +326,7 @@ RetValue	ShellCommandEndpoint
 				}
 				else if (IsCorrectOption(_arguments[2], "deactivate"))
 				{
-					ret_value = endpoint->Deactivation();	
+					ret_value = endpoint->Stop();	
 					if (ret_value == RET_VALUE_OK)
 					{
 						cout << "The endpoint[" << endpoint->GetID() << "] is deactivated." << endl;

@@ -12,47 +12,20 @@ EndpointSensor::Properties::Properties
 {
 }
 
-#if 0
-EndpointSensor::Properties::Properties
-(
-	const Properties& _properties
-)
-:	Endpoint::Properties(_properties)
-{
-	options.max_value	= _properties.options.max_value;
-	options.min_value	= _properties.options.min_value;
-}
-
-EndpointSensor::Properties::Properties
-(
-	const Properties* _properties
-)
-:	Endpoint::Properties(_properties)
-{
-	options.max_value	= _properties->options.max_value;
-	options.min_value	= _properties->options.min_value;
-}
-
-EndpointSensor::Properties::Properties
-(
-	const JSONNode& _node
-) 
-{
-	Set(_node);
-}
-
-#endif
-
 RetValue EndpointSensor::Properties::Set
 (
-	const Properties* _properties
+	const Endpoint::Properties* _properties
 )
 {
-	options.max_value	= _properties->options.max_value;
-	options.min_value	= _properties->options.min_value;
+	const EndpointSensor::Properties * properties = dynamic_cast<const EndpointSensor::Properties*>(_properties);
+
+	if (properties != NULL)
+	{
+		options.max_value	= properties->options.max_value;
+		options.min_value	= properties->options.min_value;
+	}
 
 	return	Endpoint::Properties::Set(_properties);
-
 }
 
 RetValue	EndpointSensor::Properties::Set
@@ -183,43 +156,28 @@ EndpointSensor::EndpointSensor
 )
 :	Endpoint(_type)
 {
+	EndpointSensor::Properties* internal_properties = dynamic_cast<EndpointSensor::Properties*>(properties_);
+
 	value_		= 0;
-	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.max_value	= 0;
-	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.min_value	= 0;
+	internal_properties->options.max_value	= 0;
+	internal_properties->options.min_value	= 0;
 }
 
 EndpointSensor::EndpointSensor
 (
-	const Properties& _properties
+	const Endpoint::Properties* _properties
 )
 :	Endpoint(_properties)
 {
-	value_	= 0;
-	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.max_value	= _properties.options.max_value;
-	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.min_value	= _properties.options.min_value;
-}
+	EndpointSensor::Properties* internal_properties = dynamic_cast<EndpointSensor::Properties*>(properties_);
+	const EndpointSensor::Properties* parameters = dynamic_cast<const EndpointSensor::Properties*>(_properties);
 
-EndpointSensor::EndpointSensor
-(
-	const Properties* _properties
-)
-:	Endpoint(_properties)
-{
 	value_	= 0;
-	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.max_value	= _properties->options.max_value;
-	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.min_value	= _properties->options.min_value;
-}
-
-EndpointSensor::EndpointSensor
-(
-	Type			_type,
-	const string&	_id
-)
-:	Endpoint(_type, _id)
-{
-	value_	= 0;
-	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.max_value	= 0;
-	dynamic_cast<EndpointSensor::Properties*>(properties_)->options.min_value	= 0;
+	if (parameters != NULL)
+	{
+		internal_properties->options.max_value	= parameters->options.max_value;
+		internal_properties->options.min_value	= parameters->options.min_value;
+	}
 }
 
 EndpointSensor::~EndpointSensor()
@@ -233,15 +191,15 @@ RetValue	EndpointSensor::SetProperty
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;	
-	Properties	*properties = dynamic_cast<EndpointSensor::Properties*>(properties_);
+	Properties	*internal_properties = dynamic_cast<EndpointSensor::Properties*>(properties_);
 
 	if (_name == "min_value")
 	{
-		properties->options.min_value = _value;
+		internal_properties->options.min_value = _value;
 	}
 	else if (_name == "max_value")
 	{
-		properties->options.max_value = _value;
+		internal_properties->options.max_value = _value;
 	}
 	else
 	{

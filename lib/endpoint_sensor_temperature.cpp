@@ -20,15 +20,6 @@ EndpointSensorTemperature::Properties::Properties
 
 EndpointSensorTemperature::Properties::Properties
 (
-	const	Properties& _properties
-)
-: EndpointSensor::Properties(TEMPERATURE_SENSOR)
-{
-	Set(&_properties);
-}
-
-EndpointSensorTemperature::Properties::Properties
-(
 	const	Properties* _properties
 )
 : EndpointSensor::Properties(TEMPERATURE_SENSOR)
@@ -45,12 +36,6 @@ EndpointSensorTemperature::Properties::Properties
 	Set(_node);
 }
 
-EndpointSensorTemperature::Properties*	EndpointSensorTemperature::Properties::Duplicate()
-{
-	return	new	Properties(this);
-}
-//////////////////////////////////////////////////////////////////////////
-// Sensor endpoint
 //////////////////////////////////////////////////////////////////////////
 // Temperture Sensor endpoint
 //////////////////////////////////////////////////////////////////////////
@@ -58,23 +43,6 @@ EndpointSensorTemperature::Properties*	EndpointSensorTemperature::Properties::Du
 EndpointSensorTemperature::EndpointSensorTemperature ()
 :	 EndpointSensor(TEMPERATURE_SENSOR)
 {
-}
-
-EndpointSensorTemperature::EndpointSensorTemperature
-(
-	const string& _id
-)
-:	EndpointSensor(TEMPERATURE_SENSOR, _id)
-{
-}
-
-EndpointSensorTemperature::EndpointSensorTemperature
-(
-	const Properties& _properties
-)
-:	 EndpointSensor(TEMPERATURE_SENSOR)
-{
-	Set(&_properties);
 }
 
 EndpointSensorTemperature::EndpointSensorTemperature

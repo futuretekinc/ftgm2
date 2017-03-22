@@ -338,6 +338,19 @@ RetValue	DeviceSNMP::GetEndpointValue
 	Endpoint* endpoint
 )
 {
+	if (!snmp_session_.IsOpened())
+	{
+		return	RET_VALUE_SNMP_SESSION_IS_NOT_CONNECTED;
+	}
+
+	switch(endpoint->GetType())
+	{
+	case	Endpoint::TEMPERATURE_SENSOR:
+	case	Endpoint::HUMIDITY_SENSOR:
+	case	Endpoint::VOLTAGE_SENSOR:
+	case	Endpoint::CURRENT_SENSOR:
+		break;
+	}
 	return	RET_VALUE_OK;
 }
 

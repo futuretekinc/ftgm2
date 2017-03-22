@@ -50,22 +50,6 @@ EndpointSensorCurrent::EndpointSensorCurrent()
 
 EndpointSensorCurrent::EndpointSensorCurrent
 (
-	const string& _id
-)
-:	EndpointSensor(CURRENT_SENSOR, _id)
-{
-}
-
-EndpointSensorCurrent::EndpointSensorCurrent
-(
-	const Properties& _properties
-)
-:	EndpointSensor(_properties)
-{
-}
-
-EndpointSensorCurrent::EndpointSensorCurrent
-(
 	const Properties* _properties
 )
 :	EndpointSensor(_properties)

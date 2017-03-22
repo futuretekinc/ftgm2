@@ -125,8 +125,6 @@ void MessageProcess::Thread
 	MessageProcess* _mp
 )
 {
-	INFO(NULL, "%s started.", _mp->ClassName().c_str());
-
 	_mp->PreProcess();
 
 	_mp->stop_	= false;

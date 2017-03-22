@@ -21,7 +21,6 @@ public:
 		std::string	community;
 
 					Properties(Type _type = TYPE_SNMP);
-//					Properties(const JSONNode& _node);
 
 		RetValue 	Set(const JSONNode&	_node);
 		RetValue	Set(Kompex::SQLiteStatement*	_statement);

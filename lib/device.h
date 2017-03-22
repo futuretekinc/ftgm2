@@ -40,10 +40,7 @@ public:
 
 		std::list<std::string>	endpoint_list;
 
-					//Properties();
 					Properties(Type _type);
-					//Properties(const Properties& _properties);
-					//Properties(const JSONNode&	node);
 		virtual		~Properties();
 
 		static
@@ -73,17 +70,16 @@ public:
 	
 	// Attribute
 	Type			GetType();
+	
 	const 
 	std::string&	GetID();
+
 	const 
 	std::string&	GetName();
 	RetValue		SetName(const std::string& _name);
 
 	bool			GetEnable();
 	RetValue		SetEnable(bool _enable);
-
-	bool			GetActivation();
-	RetValue		SetActivation(bool _activation);
 
 	virtual
 	RetValue		SetProperty(const std::string& _name, const std::string& _value);
@@ -104,10 +100,6 @@ public:
 
 
 	// Operator
-	RetValue		Activation();
-	RetValue		Deactivation();
-
-
 	RetValue		Connect(const std::string& _endpoint_id);
 	RetValue		Disconnect(const std::string& _endpoint_id);
 
@@ -119,8 +111,6 @@ public:
 
 	// Message handler
 	void			OnMessage(Message *_message);
-	void			OnActivation(Message *_message);
-	void			OnDeactivation(Message *_message);
 	void			OnQuit(Message *_message);
 
 	// External constructor
@@ -154,7 +144,6 @@ protected:
 	ObjectManager*	object_manager_;
 	std::thread*	schedule_thread_;
 	bool			schedule_stop_;
-	bool			activation_;
 	Scheduler<std::string>	endpoint_scheduler_;
 
 };

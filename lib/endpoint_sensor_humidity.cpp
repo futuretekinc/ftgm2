@@ -47,22 +47,6 @@ EndpointSensorHumidity::EndpointSensorHumidity()
 
 EndpointSensorHumidity::EndpointSensorHumidity
 (
-	const string&	_id
-)
-:	EndpointSensor(HUMIDITY_SENSOR, _id)
-{
-}
-
-EndpointSensorHumidity::EndpointSensorHumidity
-(
-	const Properties& _properties
-)
-:	EndpointSensor(_properties)
-{
-}
-
-EndpointSensorHumidity::EndpointSensorHumidity
-(
 	const Properties* _properties
 )
 :	EndpointSensor(_properties)
