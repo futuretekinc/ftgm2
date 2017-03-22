@@ -17,6 +17,7 @@ using namespace std;
 
 struct	Device::TypeInfo kDeviceTypeInfoList[] = 
 {
+	{ Device::TYPE_SNMP, 		"snmp"	},
 	{ Device::TYPE_FTE, 		"fte"	},
 	{ Device::TYPE_UNKNOWN, 	""		}
 };
@@ -27,7 +28,7 @@ Device::Properties::Properties()
 	ostringstream	buffer;
 	Time			time = Time::GetCurrentTime();
 
-	buffer << time.Milliseconds();
+	buffer << time.Microseconds();
 
 	type	=	TYPE_UNKNOWN;
 	id		=	"dev-" + buffer.str();
@@ -41,7 +42,7 @@ Device::Properties::Properties(Type _type)
 	ostringstream	buffer;
 	Time			time = Time::GetCurrentTime();
 
-	buffer << time.Milliseconds();
+	buffer << time.Microseconds();
 
 	type	=	_type;
 	id		=	"dev-" + buffer.str();
@@ -77,7 +78,7 @@ Device::Properties::Properties
 	ostringstream	buffer;
 	Time			time = Time::GetCurrentTime();
 
-	buffer << time.Milliseconds();
+	buffer << time.Microseconds();
 
 	INFO(NULL, "The Device properties created.");
 
@@ -103,6 +104,13 @@ Device::Properties*	Device::Properties::Create
 
 	switch(_type)
 	{
+	case	Device::TYPE_SNMP:
+		{
+			INFO(NULL, "Device SNMP properties created." );
+			properties = new DeviceSNMP::Properties();
+		}
+		break;
+
 	case	Device::TYPE_FTE:	
 		{
 			INFO(NULL, "Device FTE properties created." );
@@ -140,19 +148,7 @@ Device::Properties*	Device::Properties::Create
 		}
 	}
 
-	switch(type)
-	{
-	case	Device::TYPE_FTE:	
-		{
-			INFO(NULL, "Device FTE properties created." );
-			properties = new DeviceFTE::Properties;
-		}
-		break;
-
-	default:
-		break;
-	}
-
+	properties = Create(type);
 	if (properties != NULL)
 	{
 		properties->Set(_node);
@@ -338,16 +334,6 @@ RetValue	Device::Properties::SetProperty
 	return	RET_VALUE_OK;
 }
 
-Device::PropertiesList::~PropertiesList()
-{
-	list<Properties*>::iterator it = this->begin();
-	while(it != this->end())
-	{
-		delete (*it);
-		it++;	
-	}
-}
-
 uint32	Device::Properties::GetOptions
 (
 	uint8_t *options, 
@@ -514,22 +500,6 @@ RetValue	Device::SetProperty
 	return	RET_VALUE_INVALID_FIELD;
 }
 
-RetValue	Device::SetProperties
-(
-	const Properties& _properties
-)
-{
-	RetValue	ret_value = RET_VALUE_OK;
-
-	properties_->name 	= _properties.name;
-	properties_->id 	= _properties.id;
-	properties_->enable	= _properties.enable;
-	activation_ 		= false;
-	schedule_thread_ 	= NULL;
-
-	return	ret_value;
-}
-
 RetValue Device::SetProperties
 (
 	const Properties* _properties
@@ -537,11 +507,10 @@ RetValue Device::SetProperties
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
+	INFO(this, "Device::SetProperties called");
 	properties_->name 	= _properties->name;
 	properties_->id 	= _properties->id;
 	properties_->enable	= _properties->enable;
-	activation_ 		= false;
-	schedule_thread_ 	= NULL;
 
 	return	ret_value;
 }
@@ -930,11 +899,19 @@ void Device::DeviceScheduleProcess
 
 	switch(_type)
 	{
+	case	Device::TYPE_SNMP:
+		INFO(NULL, "Device SNMP Created");
+		device = new DeviceSNMP(_type);
+		INFO(NULL, "Device SNMP Created");
+		break;
+
 	case	Device::TYPE_FTE:
-		device = new DeviceFTE();
+		device = new DeviceFTE;
+		INFO(NULL, "Device FTE Created");
 		break;
 
 	default:
+		ERROR(NULL, RET_VALUE_INVALID_TYPE, "Not supported device[%s]!", TypeToString(_type).c_str());
 		device = NULL;
 	}
 
@@ -948,32 +925,35 @@ Device*		Device::Create
 {
 	Device* device ;
 
-	switch(_properties->type)
-	{
-	case	Device::TYPE_FTE:
-		device = new DeviceFTE;
-		break;
-
-	default:
-		device = NULL;
-	}
-
+	INFO(NULL, "Device::Create");
+	device = Create(_properties->type);
 	if (device != NULL)
 	{
-		device->SetProperties(*(DeviceFTE::Properties *)_properties);
+		INFO(NULL, "Device::Create");
+		device->SetProperties(_properties);
 	}
 
 	return	device;
 }
 
+void	Device::Show
+(
+	ostream& _os 
+)
+{
+	_os << setw(16) << "ID" 		<< " : " << properties_->id << endl;
+	_os << setw(16) << "Type"	<< " : " << Device::TypeToString(properties_->type) << endl;
+	_os << setw(16) << "Name"	<< " : " << properties_->name << endl;
+	_os << setw(16) << "Enable" 	<< " : " << properties_->enable << endl;
+}
+
 ostream& operator<<
 (
 	ostream& _os, 
-	const Device& _device
+	Device& _device
 )
 {
-	_os << "Name : " << _device.properties_->name << endl;
-	_os << "  ID : " << _device.properties_->id << endl;
+	_device.Show(_os);
 
 	return	_os;
 }

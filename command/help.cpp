@@ -5,6 +5,8 @@
 #include "object_manager.h"
 #include "data_manager.h"
 #include "device.h"
+#include "device_snmp.h"
+#include "endpoint.h"
 #include "string_utils.h"
 
 using namespace std;
@@ -40,6 +42,15 @@ RetValue	ShellCommandHelp
 		{
 			cout << command->name << " " << command->help << endl;
 		}
+	}
+	else
+	{
+		Device::Properties		*snmp_properties = new DeviceSNMP::Properties;
+		Endpoint::Properties	*endpoint_properties = new EndpointSensor::Properties(Endpoint::TEMPERATURE_SENSOR);
+
+		cout << "SNMP Properties : " << dynamic_cast<DeviceSNMP::Properties*>(snmp_properties) <<endl;
+		cout << "Endpoint Properties : " << dynamic_cast<DeviceSNMP::Properties*>(endpoint_properties) <<endl;
+
 	}
 
 	return	ret_value;

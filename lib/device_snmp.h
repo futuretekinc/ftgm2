@@ -16,6 +16,7 @@ public:
 
 	struct	Properties : Device::Properties
 	{
+		std::string	mib;
 		std::string	peer;
 		std::string	community;
 
@@ -32,7 +33,7 @@ public:
 	};
 
 	// Constructor & Destructor
-					DeviceSNMP(Type _type);
+					DeviceSNMP(Type _type = TYPE_SNMP);
 					~DeviceSNMP();
 
 	// Attribute 
@@ -46,12 +47,13 @@ public:
 
 	RetValue		SetProperty(const std::string& _name, const std::string& _value);
 
-	RetValue		SetProperties(const Properties* _properties);
-	RetValue		SetProperties(const Properties& _properties);
+	RetValue		SetProperties(const Device::Properties* _properties);
 	RetValue 		SetProperties(Kompex::SQLiteStatement*	_statement);
 	RetValue		SetProperties(const JSONNode&	_node);
 
 	RetValue		GetEndpointValue(Endpoint* _endpoint);
+
+	void			Show(std::ostream& _os);
 protected:
 
 	SNMPSession		snmp_session_;

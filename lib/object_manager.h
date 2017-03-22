@@ -3,6 +3,7 @@
 
 #include "defined.h"
 #include <map>
+#include <list>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -25,6 +26,7 @@ public:
 	~ObjectManager();
 
 	RetValue	Load(std::string _file_name);
+	RetValue	LoadFromDataManager();
 
 	RetValue	Destroy(const std::string& _device_id);
 
@@ -66,7 +68,12 @@ public:
 	RetValue	Disconnect(DataManager* _data_manager);
 	DataManager* GetDataManager();
 
-	RetValue	LoadFromDataManager();
+	RetValue	GetLoadedDeviceList(std::list<std::string>& _device_list);
+	RetValue	GetLoadedEndpointList(std::list<std::string>& _endpoint_list);
+	RetValue	SaveLoadedDevice(std::string& _device_id);
+	RetValue	SaveLoadedDevices();
+	RetValue	SaveLoadedEndpoint(std::string& _endpoint_id);
+	RetValue	SaveLoadedEndpoints();
 
 	void		OnMessage(Message* _message);
 	void		OnQuit(Message* _message);
@@ -80,13 +87,18 @@ protected:
 
 	RetValue	Connect(Device *_device);
 	RetValue	Disconnect(Device *_device);
+	RetValue	LoadDevices(const JSONNode& _json_node);
 	RetValue	LoadDevice(const JSONNode& _json_node);
 	RetValue	SaveDevice(Device* _device);
 
 	RetValue	Connect(Endpoint *_endpoint);
 	RetValue	Disconnect(Endpoint *_endpoint);
+	RetValue	LoadEndpoints(const JSONNode& _json_node);
 	RetValue	LoadEndpoint(const JSONNode& _json_node);
 	RetValue	SaveEndpoint(Endpoint* _endpoint);
+
+	std::list<std::string>				load_device_list_;
+	std::list<std::string>				load_endpoint_list_;
 
 	std::map<const std::string, Device *>		device_map_;
 	std::map<const std::string, Endpoint *>		endpoint_map_;

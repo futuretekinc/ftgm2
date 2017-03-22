@@ -31,95 +31,88 @@ RetValue	ShellCommandDevice
 		}
 		else if ((_count >= 3) && (_arguments[1] == "create"))
 		{
-			if (_arguments[2] == "file")
+			Device::Type	type = Device::StringToType(_arguments[2]);
+			if (type == Device::TYPE_UNKNOWN)
 			{
-				object_manager_->CreateDeviceFromFile(_arguments[3]);
+				_shell->Out() << "Failed to create device[" << _arguments[2] <<"]!" << endl;
 			}
 			else
 			{
-				Device::Type	type = Device::StringToType(_arguments[2]);
-				if (type == Device::TYPE_UNKNOWN)
+				uint32	index = 3;
+
+				Device::Properties	*properties = Device::Properties::Create(type);
+				if (properties == NULL)
 				{
-					_shell->Out() << "Failed to create device[" << _arguments[2] <<"]!" << endl;
+					_shell->Out() << "Invalid device type [" << type << "]" << endl;
+					ret_value = RET_VALUE_INVALID_ARGUMENTS;	
 				}
 				else
 				{
-					uint32	index = 3;
-
-					Device::Properties	*properties = Device::Properties::Create(type);
-					if (properties == NULL)
+					while(index < _count)
 					{
-						_shell->Out() << "Invalid device type [" << type << "]" << endl;
-						ret_value = RET_VALUE_INVALID_ARGUMENTS;	
-					}
-					else
-					{
-						while(index < _count)
+						if (caseInsCompare(_arguments[index], "--id"))
 						{
-							if (caseInsCompare(_arguments[index], "--id"))
+							if(index+1 < _count)
 							{
-								if(index+1 < _count)
-								{
-									properties->id = _arguments[index+1];	
-								}
-								else
-								{
-									ret_value = RET_VALUE_INVALID_ARGUMENTS;
-									_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
-									break;	
-								}
-
-								index += 2;
-							}
-							else if (caseInsCompare(_arguments[index], "--name"))
-							{
-								if(index+1 < _count)
-								{
-									properties->name = _arguments[index+1];	
-								}
-								else
-								{
-									ret_value = RET_VALUE_INVALID_ARGUMENTS;
-									_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
-									break;	
-								}
-
-								index += 2;
-							}
-							else if (caseInsCompare(_arguments[index], "--peer"))
-							{
-								if(index+1 < _count)
-								{
-									properties->name = _arguments[index+1];	
-								}
-								else
-								{
-									ret_value = RET_VALUE_INVALID_ARGUMENTS;
-									_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
-									break;	
-								}
-
-								index += 2;
+								properties->id = _arguments[index+1];	
 							}
 							else
 							{
 								ret_value = RET_VALUE_INVALID_ARGUMENTS;
-								_shell->Out() << "Invalid argument option[" << _arguments[index] << "]" << endl;
+								_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
 								break;	
 							}
-						}
 
-						if (ret_value == RET_VALUE_OK)
+							index += 2;
+						}
+						else if (caseInsCompare(_arguments[index], "--name"))
 						{
-							ret_value = object_manager->CreateDevice(properties);
-							if (ret_value != RET_VALUE_OK)
+							if(index+1 < _count)
 							{
-								_shell->Out() << "Failed to create device[" << _arguments[2] << "] at object manager!" << endl;
+								properties->name = _arguments[index+1];	
 							}
-						}
+							else
+							{
+								ret_value = RET_VALUE_INVALID_ARGUMENTS;
+								_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
+								break;	
+							}
 
-						delete properties;
+							index += 2;
+						}
+						else if (caseInsCompare(_arguments[index], "--peer"))
+						{
+							if(index+1 < _count)
+							{
+								properties->name = _arguments[index+1];	
+							}
+							else
+							{
+								ret_value = RET_VALUE_INVALID_ARGUMENTS;
+								_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
+								break;	
+							}
+
+							index += 2;
+						}
+						else
+						{
+							ret_value = RET_VALUE_INVALID_ARGUMENTS;
+							_shell->Out() << "Invalid argument option[" << _arguments[index] << "]" << endl;
+							break;	
+						}
 					}
+
+					if (ret_value == RET_VALUE_OK)
+					{
+						ret_value = object_manager->CreateDevice(properties);
+						if (ret_value != RET_VALUE_OK)
+						{
+							_shell->Out() << "Failed to create device[" << _arguments[2] << "] at object manager!" << endl;
+						}
+					}
+
+					delete properties;
 				}
 			}
 		}
@@ -152,6 +145,12 @@ RetValue	ShellCommandDevice
 			{
 				switch(_count)
 				{
+				case	2:
+					{
+						device->Show(_shell->Out());
+					}
+					break;
+
 				case	3:
 					{
 						if (caseInsCompare(_arguments[2], "type"))
@@ -209,29 +208,16 @@ RetValue	ShellCommandDevice
 
 				case	4:
 					{
-						if (caseInsCompare(_arguments[2], "name"))
+						if (caseInsCompare(_arguments[2], "name") || caseInsCompare(_arguments[2], "peer") || caseInsCompare(_arguments[2], "community"))
 						{
 							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], _arguments[3]);
 							if (ret_value == RET_VALUE_OK)
 							{
-								_shell->Out() << "The deive[" << _arguments[1] << "] name was changed to  " << _arguments[3] << endl;
+								_shell->Out() << "The deive[" << _arguments[1] << "] " << _arguments[2] << " was changed to  " << _arguments[3] << endl;
 							}
 							else 
 							{
-								_shell->Out() << "Failed to change deive[" << _arguments[1] << "] name." << endl;
-							}
-						}
-
-						if (caseInsCompare(_arguments[2], "name"))
-						{
-							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], _arguments[3]);
-							if (ret_value == RET_VALUE_OK)
-							{
-								_shell->Out() << "The deive[" << _arguments[1] << "] name was changed to  " << _arguments[3] << endl;
-							}
-							else 
-							{
-								_shell->Out() << "Failed to change deive[" << _arguments[1] << "] name." << endl;
+								_shell->Out() << "Failed to change " << _arguments[2] << " of deive[" << _arguments[1] << "]" << endl;
 							}
 						}
 					}

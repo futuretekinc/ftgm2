@@ -34,7 +34,7 @@ RetValue	ShellCommandDatabase
 				uint32_t	count = 0;
 
 				count = data_manager->GetDeviceCount();
-				Device::PropertiesList	_list;
+				list<Device::Properties*>	_list;
 
 				_shell->Out() << "Device Count : " << _count << endl;
 
@@ -44,6 +44,7 @@ RetValue	ShellCommandDatabase
 					list<Device::Properties*>::iterator	it = _list.begin();
 					while(it != _list.end())
 					{
+						delete *it;
 						it++;	
 					}
 				}

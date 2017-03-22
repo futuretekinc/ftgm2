@@ -33,7 +33,7 @@ Endpoint::Properties::Properties
 	ostringstream	buffer;
 	Time			time = Time::GetCurrentTime();
 
-	buffer << time.Milliseconds();
+	buffer << time.Microseconds();
 
 	id		= "ep-" + buffer.str();
 	index 	= 0;
@@ -58,6 +58,7 @@ Endpoint::Properties*	Endpoint::Properties::Create
 	case	TEMPERATURE_SENSOR:	return	new	EndpointSensorTemperature::Properties;
 	case	HUMIDITY_SENSOR:	return	new EndpointSensorHumidity::Properties;
 	case	VOLTAGE_SENSOR: 	return	new EndpointSensorVoltage::Properties;
+	case	CURRENT_SENSOR: 	return	new EndpointSensorCurrent::Properties;
 	case	DO_CONTROL:			return	new EndpointControlDigitalOutput::Properties;
 	default	:
 		return	NULL;
@@ -129,6 +130,36 @@ RetValue Endpoint::Properties::Set
 	value_count 	= _properties->value_count;
 
 	return	RET_VALUE_OK;
+}
+
+RetValue	Endpoint::Properties::Create
+(
+	const JSONNode& _node, 
+	list<Properties*>& _properties_list
+)
+{
+	RetValue ret_value = RET_VALUE_OK;
+
+	if(_node.type() == JSON_ARRAY)
+	{
+		for(size_t i = 0 ; i < _node.size() ; i++)
+		{
+			Properties*	properties;
+
+			properties = Create(_node[i]);	
+			if (properties != NULL)
+			{
+				_properties_list.push_back(properties);
+			}
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_FORMAT;
+	}
+
+	
+	return	ret_value;
 }
 
 RetValue Endpoint::Properties::Set
@@ -1003,6 +1034,7 @@ Endpoint* 	Endpoint::Create
 	case	Endpoint::TEMPERATURE_SENSOR:	return	new	EndpointSensorTemperature;
 	case	Endpoint::HUMIDITY_SENSOR:		return	new EndpointSensorHumidity;
 	case	Endpoint::VOLTAGE_SENSOR: 		return	new EndpointSensorVoltage;
+	case	Endpoint::CURRENT_SENSOR: 		return	new EndpointSensorCurrent;
 	case	Endpoint::DO_CONTROL:			return	new EndpointControlDigitalOutput;
 	default	:
 		return	NULL;

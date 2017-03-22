@@ -67,12 +67,6 @@ public:
 		uint32		GetOptions(uint8_t *options, uint32 options_len);
 	};
 
-	class	PropertiesList : public std::list<Properties *>
-	{
-	public:
-		~PropertiesList();
-	};
-
 	// Constructor & Destructor
 					Device(Type _type);
 	virtual			~Device();
@@ -101,8 +95,6 @@ public:
 	virtual 
 	Properties*		GetProperties();
 
-	virtual
-	RetValue		SetProperties(const Properties& _properties);
 	virtual
 	RetValue		SetProperties(const Properties* _properties);
 	virtual			
@@ -143,7 +135,10 @@ public:
 	static const 
 	std::string&	TypeToString(Type _type);
 
-	friend std::ostream& operator<<(std::ostream& _os, const Device& _device);
+	virtual
+	void			Show(std::ostream& _os);
+
+	friend std::ostream& operator<<(std::ostream& _os, Device& _device);
 
 protected:
 	// Internal functions

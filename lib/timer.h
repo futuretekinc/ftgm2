@@ -12,6 +12,7 @@ public:
 	void 		Update();
 	
 	uint64_t	Milliseconds();
+	uint64_t	Microseconds();
 	
 	void		Add(uint64_t	_milliseconds);
 

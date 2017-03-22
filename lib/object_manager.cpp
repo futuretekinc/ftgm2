@@ -71,28 +71,52 @@ RetValue	ObjectManager::Load
 		pbuf->pubseekpos (0,ifs.in);
 
 		char* buffer=new char[size + 1];
+		memset(buffer, 0, size+1);
 
 		pbuf->sgetn (buffer, size);
 		ifs.close();
 
+		INFO(this, "Load configuration[%s]", file_name.c_str());
+			INFO(this, buffer);
+		TRACE_PUSH();
 		if (libjson::is_valid(buffer) == true)
 		{
 			JSONNode	root = libjson::parse(buffer);
-			for(size_t i = 0 ; i < root.size() ; i++)
+			for(size_t i = 0 ; (ret_value == RET_VALUE_OK) && (i < root.size()) ; i++)
 			{
-				if (root[i].name() == "device")
+				if (root[i].name() == "devices")
 				{
-					LoadDevice(root[i]);	
+					ret_value = LoadDevices(root[i]);	
+				}
+				else if (root[i].name() == "device")
+				{
+					ret_value = LoadDevice(root[i]);	
+				}
+				else if (root[i].name() == "endpoints")
+				{
+					ret_value = LoadEndpoints(root[i]);	
 				}
 				else if (root[i].name() == "endpoint")
 				{
-					LoadEndpoint(root[i]);	
+					ret_value = LoadEndpoint(root[i]);	
 				}
 			}
 		}
+		else
+		{
+			ret_value = RET_VALUE_INVALID_CONFIG_FILE;
+			INFO(this, buffer);
+		}
+
+		if (ret_value != RET_VALUE_OK)
+		{
+			ERROR(this, ret_value, "Failed to load configuration!");	
+		}
+		TRACE_POP();
+
 		delete	[] buffer;
 
-		return	RET_VALUE_OK;
+		return	ret_value;
 	}
 	catch(exception& e)
 	{
@@ -277,6 +301,8 @@ RetValue	ObjectManager::LoadDevices
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
+	INFO(this, "Load Devices");
+	TRACE_PUSH();
 	if(_json_node.type() == JSON_ARRAY)
 	{
 		for(int i = 0 ; i < (int)_json_node.size() ; i++)
@@ -288,6 +314,7 @@ RetValue	ObjectManager::LoadDevices
 			}
 		}
 	}
+	TRACE_POP();
 
 	return	ret_value;
 }
@@ -298,6 +325,9 @@ RetValue	ObjectManager::LoadDevice
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
+
+	INFO(this, "Load Device");
+	TRACE_PUSH();
 
 	if (_json_node.type() == JSON_NODE)
 	{
@@ -311,17 +341,60 @@ RetValue	ObjectManager::LoadDevice
 		}
 		else
 		{
-			Device::Properties*	properties = Device::Properties::Create(_json_node);
-			if (properties != NULL)
+			Device::Properties*	device_properties;
+			list<Endpoint::Properties*>	epp_list;
+			
+			device_properties = Device::Properties::Create(_json_node);
+			if (device_properties != NULL)
 			{
-				device = Device::Create(properties);
+				it = _json_node.find("endpoints");
+				if (it != _json_node.end())
+				{
+					ret_value = Endpoint::Properties::Create(*it, epp_list);
+					if (ret_value == RET_VALUE_OK)
+					{
+						for(auto epp_it = epp_list.begin();epp_it != epp_list.end(); epp_it++)
+						{
+							(*epp_it)->device_id = device_properties->id;
+						}
+					}
+					else
+					{
+						delete device_properties;
+
+						device_properties = NULL;
+					}
+				}
+			}
+
+			if (device_properties != NULL)
+			{
+				device = Device::Create(device_properties);
 				if (device != NULL)
 				{
 					ret_value = Connect(device);
-					if (ret_value != RET_VALUE_OK)
+					if (ret_value == RET_VALUE_OK)
+					{
+						load_device_list_.push_back(device->GetID());	
+
+						for(auto epp_it = epp_list.begin(); epp_it != epp_list.end() ; epp_it++)
+						{
+							Endpoint *endpoint;
+
+							endpoint = Endpoint::Create(*epp_it);
+							if (endpoint != NULL)
+							{
+								ret_value = Connect(endpoint);
+								if (ret_value == RET_VALUE_OK)
+								{
+									load_endpoint_list_.push_back(endpoint->GetID());	
+								}
+							}
+						}
+					}
+					else
 					{
 						ERROR(this, ret_value, "Failed to attach device to manager!");
-
 						delete device;
 					}
 				}
@@ -330,8 +403,13 @@ RetValue	ObjectManager::LoadDevice
 					ret_value = RET_VALUE_NOT_ENOUGH_MEMORY;
 					ERROR(this, ret_value, "Failed to create device!");	
 				}
-			}
 
+				delete device_properties;
+				for(auto epp_it = epp_list.begin(); epp_it != epp_list.end() ; epp_it++)
+				{
+					delete *epp_it;
+				}
+			}
 		}
 	}
 	else
@@ -339,6 +417,7 @@ RetValue	ObjectManager::LoadDevice
 		ret_value = RET_VALUE_INVALID_TYPE;
 		ERROR(this, ret_value, "Object is not node!");
 	}
+	TRACE_POP();
 
 	return	ret_value;
 }
@@ -363,7 +442,7 @@ RetValue	ObjectManager::SetDeviceProperty
 	ret_value = device->SetProperty(_field, _value);
 	if (ret_value == RET_VALUE_OK)
 	{
-		ret_value = data_manager_->SetDeviceProperty(_id, _field, _value);
+		ret_value = data_manager_->SetDeviceProperties(device->GetProperties());
 	}
 
 	if (ret_value != RET_VALUE_OK)
@@ -394,7 +473,7 @@ RetValue	ObjectManager::SetDeviceProperty
 	ret_value = device->SetProperty(_field, _value);
 	if (ret_value == RET_VALUE_OK)
 	{
-		ret_value = data_manager_->SetDeviceProperty(_id, _field, _value);
+		ret_value = data_manager_->SetDeviceProperties(device->GetProperties());
 	}
 
 	if (ret_value != RET_VALUE_OK)
@@ -425,7 +504,7 @@ RetValue	ObjectManager::SetDeviceProperty
 	ret_value = device->SetProperty(_field, _value);
 	if (ret_value == RET_VALUE_OK)
 	{
-		ret_value = data_manager_->SetDeviceProperty(_id, _field, _value);
+		ret_value = data_manager_->SetDeviceProperties(device->GetProperties());
 	}
 
 	if (ret_value != RET_VALUE_OK)
@@ -717,7 +796,7 @@ RetValue	ObjectManager::SetEndpointProperty
 	ret_value = endpoint->SetProperty(_field, _value);
 	if (ret_value == RET_VALUE_OK)
 	{
-		ret_value = data_manager_->SetEndpointProperty(_id, _field, _value);
+		ret_value = data_manager_->SetEndpointProperties(endpoint->GetProperties());
 	}
 
 	if (ret_value != RET_VALUE_OK)
@@ -748,7 +827,7 @@ RetValue	ObjectManager::SetEndpointProperty
 	ret_value = endpoint->SetProperty(_field, _value);
 	if (ret_value == RET_VALUE_OK)
 	{
-		ret_value = data_manager_->SetEndpointProperty(_id, _field, _value);
+		ret_value = data_manager_->SetEndpointProperties(endpoint->GetProperties());
 	}
 
 	if (ret_value != RET_VALUE_OK)
@@ -779,7 +858,7 @@ RetValue	ObjectManager::SetEndpointProperty
 	ret_value = endpoint->SetProperty(_field, _value);
 	if (ret_value == RET_VALUE_OK)
 	{
-		ret_value = data_manager_->SetEndpointProperty(_id, _field, _value);
+		ret_value = data_manager_->SetEndpointProperties(endpoint->GetProperties());
 	}
 
 	if (ret_value != RET_VALUE_OK)
@@ -790,6 +869,47 @@ RetValue	ObjectManager::SetEndpointProperty
 	return	ret_value;
 }
 
+RetValue	ObjectManager::LoadEndpoints
+(
+	const	JSONNode& _json_node
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	INFO(this, "Start loading endpoint arrays.");
+	TRACE_PUSH();
+
+	if(_json_node.type() == JSON_ARRAY)
+	{
+		for(int i = 0 ; i < (int)_json_node.size() ; i++)
+		{
+			ret_value = LoadEndpoint(_json_node[i]);	
+			if (ret_value != RET_VALUE_OK)
+			{
+				break;
+			}
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_INVALID_TYPE;
+	}
+
+	if (ret_value == RET_VALUE_OK)
+	{
+		INFO(this, "Endpoint array load finished.");
+	}
+	else
+	{
+		ERROR(this, ret_value, "An error occurred while loading the endpoint array!");
+	}
+
+	TRACE_POP();
+
+	return	ret_value;
+}
+
+
 RetValue	ObjectManager::LoadEndpoint
 (
 	const	JSONNode& _json_node
@@ -797,47 +917,59 @@ RetValue	ObjectManager::LoadEndpoint
 {
 	RetValue	ret_value = RET_VALUE_OK;
 
-	if(_json_node.type() == JSON_ARRAY)
-	{
-		for(int i = 0 ; i < (int)_json_node.size() ; i++)
-		{
-			LoadEndpoint(_json_node[i]);	
-		}
-	}
-	else if (_json_node.type() == JSON_NODE)
+	INFO(this, "Start loading endpoint.");
+	TRACE_PUSH();
+	if (_json_node.type() == JSON_NODE)
 	{
 		Endpoint* endpoint = NULL;
 
 		JSONNode::const_iterator it=_json_node.find("type");
-		if (it == _json_node.end())
-		{
-			ret_value = RET_VALUE_INVALID_TYPE;
-			ERROR(this, RET_VALUE_INVALID_TYPE, "type not found!");
-		}
-		else
+		if (it != _json_node.end())
 		{
 			Endpoint::Type	type = (Endpoint::Type)it->as_int();
 			Endpoint::Properties*	properties = Endpoint::Properties::Create(type);
 			if (properties != NULL)
 			{
-				properties->Set(_json_node);
-
-
-				ret_value = CreateEndpoint(properties);
-				if (ret_value != RET_VALUE_OK)
+				ret_value = properties->Set(_json_node);
+				if (ret_value == RET_VALUE_OK)
 				{
-					ERROR(this, ret_value, "Failed to create endpoint!");	
-					delete properties;
+					ret_value = CreateEndpoint(properties);
+					if (ret_value == RET_VALUE_OK)
+					{
+						load_endpoint_list_.push_back(properties->id);	
+					}
+					else
+					{
+						ERROR(this, ret_value, "Failed to create endpoint!");	
+					}
 				}
-			}
+				else
+				{
+					ERROR(this, ret_value, "Failed to set properties!");	
+				}
 
+				delete properties;
+			}
+		}
+		else
+		{
+			ret_value = RET_VALUE_INVALID_TYPE;
 		}
 	}
 	else
 	{
 		ret_value = RET_VALUE_INVALID_TYPE;
-		ERROR(this, ret_value, "Object is not node!");
 	}
+
+	if (ret_value == RET_VALUE_OK)
+	{
+		INFO(this, "The endpoint load finished!");
+	}
+	else
+	{
+		ERROR(this, ret_value, "Failed to load endpoint!");
+	}
+	TRACE_POP();
 
 	return	ret_value;
 }
@@ -1051,6 +1183,125 @@ void	ObjectManager::OnMessage
 	}
 }
 
+RetValue	ObjectManager::GetLoadedDeviceList
+(
+	list<string>& _device_list
+)
+{
+	_device_list = load_device_list_;
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	ObjectManager::GetLoadedEndpointList
+(
+	list<string>& _endpoint_list
+)
+{
+	_endpoint_list = load_endpoint_list_;
+
+	return	RET_VALUE_OK;
+}
+
+RetValue	ObjectManager::SaveLoadedDevice
+(
+	string& _device_id
+)
+{
+	RetValue	ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+
+	for(auto it = load_device_list_.begin(); it != load_device_list_.end(); it++)
+	{
+		if (*it == _device_id)
+		{
+			Device *device = GetDevice(_device_id);
+			if (device != NULL)
+			{
+				ret_value = data_manager_->AddDevice(device->GetProperties());	
+				if (ret_value != RET_VALUE_OK)
+				{
+					ERROR(this, ret_value, "Failed to add device[%s]!", it->c_str());		
+				}
+			}
+
+			break;
+		}
+	}
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::SaveLoadedDevices()
+{
+	RetValue	ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+
+	for( auto it = load_device_list_.begin(); it != load_device_list_.end(); it++)
+	{
+		Device *device = GetDevice(*it);
+		if (device != NULL)
+		{
+			ret_value = data_manager_->AddDevice(device->GetProperties());	
+			if (ret_value != RET_VALUE_OK)
+			{
+				ERROR(this, ret_value, "Failed to add device[%s]!", it->c_str());		
+				break;
+			}
+		}
+	}
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::SaveLoadedEndpoint
+(
+	std::string& _endpoint_id
+)
+{
+	RetValue	ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+
+	for( auto it = load_endpoint_list_.begin(); it != load_endpoint_list_.end(); it++)
+	{
+		if (*it == _endpoint_id)
+		{
+			Endpoint *endpoint = GetEndpoint(_endpoint_id);
+			if (endpoint != NULL)
+			{
+				ret_value = data_manager_->AddEndpoint(endpoint->GetProperties());	
+				if (ret_value != RET_VALUE_OK)
+				{
+					ERROR(this, ret_value, "Failed to add endpoint[%s]!", it->c_str());		
+				}
+			}
+			break;
+		}
+	}
+
+	return	ret_value;
+}
+
+RetValue	ObjectManager::SaveLoadedEndpoints()
+{
+	RetValue	ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+
+	for(auto it = load_endpoint_list_.begin(); it != load_endpoint_list_.end(); it++)
+	{
+		Endpoint *endpoint = GetEndpoint(*it);
+		if (endpoint != NULL)
+		{
+			ret_value = data_manager_->AddEndpoint(endpoint->GetProperties());	
+			if (ret_value != RET_VALUE_OK)
+			{
+				ERROR(this, ret_value, "Failed to add endpoint[%s]!", it->c_str());
+				break;
+			}
+		}
+	}
+
+	return	ret_value;
+}
+////////////////////////////////////////////////////////////////////////////////
+//
+////////////////////////////////////////////////////////////////////////////////
 void	ObjectManager::OnQuit
 (
 	Message*	_message

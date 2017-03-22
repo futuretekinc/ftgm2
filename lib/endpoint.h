@@ -42,6 +42,9 @@ public:
 		Properties*	Create(const JSONNode& _node);
 		static
 		Properties*	Create(const Kompex::SQLiteStatement*	_statement);
+		
+		static
+		RetValue	Create(const JSONNode& _node, std::list<Properties*>& _properties_list);
 
 		virtual
 		RetValue	Set(const JSONNode& _node);

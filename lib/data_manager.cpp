@@ -124,40 +124,43 @@ RetValue	DataManager::AddDevice
 			}
 		}
 
-		ostringstream	query;
+		uint8_t*	options = NULL;
+		uint32_t	options_len = _properties->GetOptionsSize();
 
-		query << "INSERT INTO devices (_id, _type, _enable, _name, _options) VALUES (?,?,?,?,?);";
-		INFO(this, "Query : %s", query.str().c_str());
+		if (options_len > 0)
+		{
+			options = new uint8_t[options_len];	
+
+			_properties->GetOptions(options, options_len);
+		}
+
 		try 
 		{
-			uint8_t*	options = NULL;
-			uint32_t	options_len = _properties->GetOptionsSize();
+			ostringstream	query;
+			uint32_t		index = 0;
 
-			if (options_len > 0)
-			{
-				options = new uint8_t[options_len];	
-
-				_properties->GetOptions(options, options_len);
-			}
+			query << "INSERT INTO devices (_id, _type, _enable, _name, _options) VALUES (?,?,?,?,?);";
+			INFO(this, "Query : %s", query.str().c_str());
 
 			statement_->Sql(query.str());
-			statement_->BindString(1, _properties->id);
-			statement_->BindInt(2, _properties->type);
-			statement_->BindInt(3, _properties->enable);
-			statement_->BindString(4, _properties->name);
-			statement_->BindBlob(5, options, options_len);
+			statement_->BindString(++index, _properties->id);
+			statement_->BindInt(++index, 	_properties->type);
+			statement_->BindInt(++index, 	_properties->enable);
+			statement_->BindString(++index, _properties->name);
+			statement_->BindBlob(++index, options, options_len);
 
 			statement_->ExecuteAndFree();
 
-			if (options != NULL)
-			{
-				delete options;	
-			}
 		}
 		catch(SQLiteException &exception)
 		{
 			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
 			ERROR(this, ret_value, "Failed to add device to table[%s] - %s", _properties->id.c_str(), exception.GetString().c_str());
+		}
+
+		if (options != NULL)
+		{
+			delete options;	
 		}
 	}
 	else
@@ -189,27 +192,30 @@ RetValue	DataManager::SetDeviceProperties
 			}
 		}
 
-		ostringstream	query;
+		uint8_t*	options = NULL;
+		uint32_t	options_len = _properties->GetOptionsSize();
 
-		query << "UPDATE devices SET ";
-		query << "_enable=@enable";
-		query << ", ";
-		query << "_name =@name";
-		//query << ",";
-		//query << "_options=@options ";
-		query << " WHERE _id=@id";
-		
-		INFO(this, "Query : %s", query.str().c_str());
+		if (options_len > 0)
+		{
+			options = new uint8_t[options_len];	
+
+			_properties->GetOptions(options, options_len);
+		}
 
 		try 
 		{
 			int	index = 0;
+			ostringstream	query;
+
+			query << "UPDATE devices SET _enable=@enable, _name =@name, _options=@options WHERE _id=@id";
+			INFO(this, "Query : %s", query.str().c_str());
+
 
 			statement_->Sql(query.str());
 
 			statement_->BindInt(++index, _properties->enable);
 			statement_->BindString(++index, _properties->name);
-			//statement_->BindBlob(++index, _properties->options);
+			statement_->BindBlob(++index, options);
 			statement_->BindString(++index, _properties->id);
 
 			statement_->ExecuteAndFree();
@@ -218,6 +224,11 @@ RetValue	DataManager::SetDeviceProperties
 		{
 			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
 			ERROR(this, ret_value, "Failed to add device to table[%s] - %s", _properties->id.c_str(), exception.GetString().c_str());
+		}
+
+		if(options != 0)
+		{
+			delete options;
 		}
 	}
 	else
@@ -622,44 +633,47 @@ RetValue	DataManager::AddEndpoint
 			}
 		}
 
-		ostringstream	query;
+		uint8_t*	options = NULL;
+		uint32_t	options_len = _properties->GetOptionsSize();
 
-		query << "INSERT INTO endpoints (_id, _type, _index, _enable, _name, _device_id, _update_interval, _value_count, _options) ";
-		query << "Values (?,?,?,?,?,?,?,?,?);";
+		if (options_len > 0)
+		{
+			options = new uint8_t[options_len];	
+
+			_properties->GetOptions(options, options_len);
+		}
+
 		try 
 		{
-			uint8_t*	options = NULL;
-			uint32_t	options_len = _properties->GetOptionsSize();
+			ostringstream	query;
+			uint32_t		index = 0;
 
-			if (options_len > 0)
-			{
-				options = new uint8_t[options_len];	
-
-				_properties->GetOptions(options, options_len);
-			}
+			query << "INSERT INTO endpoints (_id, _type, _index, _enable, _name, _device_id, _update_interval, _value_count, _options) ";
+			query << "Values (?,?,?,?,?,?,?,?,?);";
 
 			statement_->Sql(query.str());
-			statement_->BindString(1, _properties->id);
-			statement_->BindInt(2, _properties->type);
-			statement_->BindInt(3, _properties->index);
-			statement_->BindInt(4, _properties->enable);
-			statement_->BindString(5, _properties->name);
-			statement_->BindString(6, _properties->device_id);
-			statement_->BindInt(7, _properties->update_interval);
-			statement_->BindInt(8, _properties->value_count);
-			statement_->BindBlob(9, options, options_len);
+			statement_->BindString(++index, _properties->id);
+			statement_->BindInt(++index, _properties->type);
+			statement_->BindInt(++index, _properties->index);
+			statement_->BindInt(++index, _properties->enable);
+			statement_->BindString(++index, _properties->name);
+			statement_->BindString(++index, _properties->device_id);
+			statement_->BindInt(++index, _properties->update_interval);
+			statement_->BindInt(++index, _properties->value_count);
+			statement_->BindBlob(++index, options, options_len);
 
 			statement_->ExecuteAndFree();
 			
-			if (options != NULL)
-			{
-				delete options;	
-			}
 		}
 		catch(SQLiteException &exception)
 		{
 			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
 			ERROR(this, ret_value, "Failed to add device to table[%s]", _properties->id.c_str());
+		}
+
+		if (options != NULL)
+		{
+			delete options;	
 		}
 	}
 	else
@@ -877,38 +891,22 @@ RetValue	DataManager::SetEndpointProperties
 			}
 		}
 
+		uint8_t*	options = NULL;
+		uint32_t	options_len = _properties->GetOptionsSize();
+
+		if (options_len > 0)
+		{
+			options = new uint8_t[options_len];	
+
+			_properties->GetOptions(options, options_len);
+		}
+
 		try 
 		{
-			int			index=0;
+			int				index=0;
 			ostringstream	query;
-			uint8_t*	options = NULL;
-			uint32_t	options_len = _properties->GetOptionsSize();
 
-			if (options_len > 0)
-			{
-				options = new uint8_t[options_len];	
-
-				_properties->GetOptions(options, options_len);
-			}
-
-			query << "UPDATE endpoints SET ";
-			query << "_index=@index";
-			query << ", ";
-			query << "_enable=@enable";
-			query << ", ";
-			query << "_name=@name";
-			query << ", ";
-			query << "_device_id=@device_id";
-			query << ", ";
-			query << "_update_interval=@update_interval";
-			query << ", ";
-			query << "_value_count=@value_count";
-			if(options_len > 0)
-			{
-				query << ", ";
-				query << "_options=@options";
-			}
-			query << "  WHERE _id=@id";
+			query << "UPDATE endpoints SET _index=@index, _enable=@enable, _name=@name, _device_id=@device_id, _update_interval=@update_interval, _value_count=@value_count, _options=@options WHERE _id=@id";
 
 			statement_->Sql(query.str());
 			statement_->BindInt(++index, _properties->index);
@@ -917,23 +915,21 @@ RetValue	DataManager::SetEndpointProperties
 			statement_->BindString(++index, _properties->device_id);
 			statement_->BindInt(++index, _properties->update_interval);
 			statement_->BindInt(++index, _properties->value_count);
-			if(options_len > 0)
-			{
-				statement_->BindBlob(++index, options, options_len);
-			}
+			statement_->BindBlob(++index, options, options_len);
 			statement_->BindString(++index, _properties->id);
 
 			statement_->ExecuteAndFree();
 			
-			if (options != NULL)
-			{
-				delete options;	
-			}
 		}
 		catch(SQLiteException &exception)
 		{
 			ret_value = RET_VALUE_DB_ERROR | exception.GetSqliteResultCode();
 			ERROR(this, ret_value, "Failed to add endpoint[%s] to table[endpoints] - %s", _properties->id.c_str(), exception.GetString().c_str());
+		}
+
+		if (options != NULL)
+		{
+			delete options;	
 		}
 	}
 	else

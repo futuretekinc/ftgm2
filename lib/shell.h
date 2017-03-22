@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include "trace.h"
 #include "object_manager.h"
+#include "string_utils.h"
 #include <iostream>
 
 template <typename T>	class	ShellCommand;
@@ -205,7 +206,13 @@ protected:
 				typename std::map<const std::string, ShellCommand<T>*>::iterator it = _shell->command_map_.find(arguments[0])	;
 				if (it != _shell->command_map_.end())
 				{
-					it->second->function(arguments, count, _shell);
+					RetValue	ret_value;
+
+					ret_value = it->second->function(arguments, count, _shell);
+					if (ret_value == RET_VALUE_INVALID_ARGUMENTS)
+					{
+						std::cout << it->second->help << std::endl;
+					}
 				}
 				else
 				{
@@ -221,6 +228,6 @@ protected:
 
 inline bool	IsCorrectOption(const std::string& _argument, const char *_option)
 {
-	return	(strcasecmp(_argument.c_str(), _option) == 0);
+	return	caseInsCompare(_argument, _option);
 }
 #endif

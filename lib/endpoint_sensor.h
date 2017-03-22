@@ -57,5 +57,6 @@ private:
 #include "endpoint_sensor_temperature.h"
 #include "endpoint_sensor_humidity.h"
 #include "endpoint_sensor_voltage.h"
+#include "endpoint_sensor_current.h"
 
 #endif

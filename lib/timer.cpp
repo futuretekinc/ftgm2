@@ -30,6 +30,11 @@ uint64_t	Time::Milliseconds()
 	return	time.tv_sec * (uint64_t)1000 + (time.tv_usec / 1000);
 }
 
+uint64_t	Time::Microseconds()
+{
+	return	time.tv_sec * (uint64_t)1000000 + time.tv_usec;
+}
+
 const Time&	Time::GetCurrentTime()
 {
 	static	Time current_time;

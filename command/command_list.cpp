@@ -8,6 +8,7 @@
 
 using namespace std;
 
+extern	ShellCommand<ObjectManager>	object_manager_command_config;
 extern	ShellCommand<ObjectManager>	object_manager_command_device;
 extern	ShellCommand<ObjectManager>	object_manager_command_endpoint;
 extern	ShellCommand<ObjectManager>	object_manager_command_trace;
@@ -17,6 +18,7 @@ extern	ShellCommand<ObjectManager>	object_manager_command_quit;
 
 ShellCommand<ObjectManager>*	object_manager_shell_commands[] = 
 {
+	&object_manager_command_config,
 	&object_manager_command_device,
 	&object_manager_command_endpoint,
 	&object_manager_command_trace,

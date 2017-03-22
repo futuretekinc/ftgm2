@@ -12,20 +12,10 @@ DeviceSNMP::Properties::Properties
 )
 : Device::Properties(_type)
 {
+	peer 		= "";
+	community 	= "public";
+	mib			= "";
 }
-
-#if 0
-DeviceSNMP::Properties::Properties
-(
-	const JSONNode& _node
-) 
-: Device::Properties(_node)
-{
-	INFO(NULL, "The DeviceSNMP properties created." );
-
-	type = TYPE_SNMP;
-}
-#endif
 
 RetValue DeviceSNMP::Properties::Set
 (
@@ -89,6 +79,19 @@ RetValue DeviceSNMP::Properties::Set
 		}
 
 	}
+	else if (strcasecmp(_node.name().c_str(), "mib") == 0)
+	{
+		if ((_node.type() != JSON_STRING) && (_node.type() != JSON_NULL))
+		{
+			ret_value = RET_VALUE_INVALID_FIELD;
+			ERROR(NULL, ret_value, "Failed to set field[%s].", _node.name().c_str());
+		}
+		else
+		{
+			mib = _node.as_string();
+		}
+
+	}
 	else 
 	{
 		ret_value = Device::Properties::Set(_node);
@@ -110,6 +113,10 @@ RetValue	DeviceSNMP::Properties::SetProperty
 	else if (_name == "community")
 	{
 		community= _value;	
+	}
+	else if (_name == "mib")
+	{
+		mib = _value;	
 	}
 	else
 	{
@@ -153,8 +160,8 @@ DeviceSNMP::DeviceSNMP
 {
 	Properties	*properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
 
-	properties->peer 		= "";
-	properties->community 	= "public";
+
+	INFO(this, "SNMP Device created");
 }
 
 DeviceSNMP::~DeviceSNMP()
@@ -165,9 +172,9 @@ DeviceSNMP::~DeviceSNMP()
 const 
 std::string&	DeviceSNMP::GetPeer()
 {	
-	Properties	*properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
+	Properties	*internal_properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
 
-	return	properties->peer;	
+	return	internal_properties->peer;	
 }
 
 void	DeviceSNMP::SetPeer
@@ -175,17 +182,17 @@ void	DeviceSNMP::SetPeer
 	const std::string& _peer
 )	
 {	
-	Properties	*properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
+	Properties	*internal_properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
 
-	properties->peer = _peer;
+	internal_properties->peer = _peer;
 }
 
 const 
 std::string&	DeviceSNMP::GetCommunity()	
 {	
-	Properties	*properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
+	Properties	*internal_properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
 
-	return	properties->community;	
+	return	internal_properties->community;	
 }
 
 void	DeviceSNMP::SetCommunity
@@ -193,9 +200,9 @@ void	DeviceSNMP::SetCommunity
 	const std::string& _community
 )	
 {	
-	Properties	*properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
+	Properties	*internal_properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
 
-	properties->community = _community;
+	internal_properties->community = _community;
 }
 
 RetValue DeviceSNMP::SetProperty
@@ -205,15 +212,15 @@ RetValue DeviceSNMP::SetProperty
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
-	Properties	*properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
+	Properties	*internal_properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
 
 	if (_field == "peer")
 	{
-		properties->peer = _value;
+		internal_properties->peer = _value;
 	}
 	else if (_field == "community")
 	{
-		properties->community = _value;
+		internal_properties->community = _value;
 	}
 	else
 	{
@@ -226,38 +233,19 @@ RetValue DeviceSNMP::SetProperty
 
 RetValue DeviceSNMP::SetProperties
 (
-	const Properties& _properties
+	const Device::Properties* _properties
 )
 {
-	RetValue	ret_value = RET_VALUE_OK;
-	Properties	*properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
-	
-	ret_value = Device::SetProperties(_properties);
-	if (ret_value == RET_VALUE_OK)
+	const Properties	*properties = dynamic_cast<const DeviceSNMP::Properties*>(_properties);
+	if (properties != NULL)
 	{
-		properties->peer 		= _properties.peer;
-		properties->community 	= _properties.community;
+		Properties	*internal_properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
+
+		internal_properties->peer 		= properties->peer;
+		internal_properties->community 	= properties->community;
 	}
 
-	return	ret_value;
-}
-
-RetValue DeviceSNMP::SetProperties
-(
-	const Properties* _properties
-)
-{
-	RetValue	ret_value = RET_VALUE_OK;
-	Properties	*properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
-	
-	ret_value = Device::SetProperties(_properties);
-	if (ret_value == RET_VALUE_OK)
-	{
-		properties->peer 		= _properties->peer;
-		properties->community 	= _properties->community;
-	}
-
-	return	ret_value;
+	return	Device::SetProperties(_properties);
 }
 
 RetValue DeviceSNMP::SetProperties
@@ -381,4 +369,17 @@ void	DeviceSNMP::OnActivated()
 
 void	DeviceSNMP::OnDeactivated()
 {
+}
+
+void	DeviceSNMP::Show
+(
+	ostream& _os 
+)
+{
+	Properties* properties = dynamic_cast<Properties*>(properties_);
+
+	Device::Show(_os);
+	_os << setw(16) << "Peer" 		<< " : " << properties->peer << endl;
+	_os << setw(16) << "Community" 	<< " : " << properties->community << endl;
+	_os << setw(16) << "MIB" 		<< " : " << properties->mib << endl;
 }
