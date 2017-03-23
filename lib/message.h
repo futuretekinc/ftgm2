@@ -4,8 +4,9 @@
 #include <string>
 
 
-struct	Message
+class	Message
 {
+public:
 	enum	Type
 	{
 		TYPE_START,
@@ -16,7 +17,8 @@ struct	Message
 		TYPE_DEACTIVATED,
 		TYPE_TEST,
 		TYPE_QUIT,
-		TYPE_UNKNOWN
+		TYPE_UNKNOWN,
+		TYPE_SESSION_DISCONNECTED
 	};
 
 	Type	type;
@@ -31,50 +33,57 @@ struct	Message
 	std::string&	ToString(Message* _message);
 };
 
-struct	MessageStart : Message
+class	MessageStart : public Message
 {
-
+public:
 	MessageStart() : Message(TYPE_START) {};
 	MessageStart(const std::string& _id) : Message(TYPE_START, _id) {};
 };
 
-struct	MessageStarted : Message
+class	MessageStarted : public Message
 {
+public:
 	MessageStarted() : Message(TYPE_STARTED) {};
 	MessageStarted(const std::string& _id) : Message(TYPE_STARTED, _id) {};
 };
 
-struct	MessageStop : Message
+class	MessageStop : public Message
 {
+public:
 	MessageStop() : Message(TYPE_STOP) {};
 	MessageStop(const std::string& _id) : Message(TYPE_STOP, _id) {};
 };
 
-struct	MessageStopped : Message
+class	MessageStopped : public Message
 {
+public:
 	MessageStopped() : Message(TYPE_STOPPED) {};
 	MessageStopped(const std::string& _id) : Message(TYPE_STOPPED, _id) {};
 };
 
-struct	MessageTest : Message
+class	MessageTest : public Message
 {
+public:
 	std::string	message;
 
 	MessageTest(const std::string& _message);
 };
 
-struct	MessageActivated : Message
+class	MessageActivated : public Message
 {
+public:
 	MessageActivated();
 };
 
-struct	MessageDeactivated : Message
+class	MessageDeactivated : public Message
 {
+public:
 	MessageDeactivated();
 };
 
-struct	MessageQuit : Message
+class	MessageQuit : public Message
 {
+public:
 	MessageQuit();
 };
 

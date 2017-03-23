@@ -5,8 +5,6 @@
 #include <mutex>
 #include "message.h"
 
-struct	Message;
-
 class	MessageQueue
 {
 public:

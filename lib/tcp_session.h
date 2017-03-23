@@ -6,18 +6,26 @@
 #include <list>
 #include "message_process.h"
 
+class	TCPServer;
+
 class	TCPSession : public MessageProcess
 {
 public:
-	TCPSession(int	_socket, struct sockaddr *_addr_info);
+	TCPSession(TCPServer *_server, int	_socket, struct sockaddr_in *_addr_info, uint32_t _timeout);
 	~TCPSession();
 
+	RetValue	Disconnect();
+	RetValue	Send(void *data, uint32_t len);
 
 protected:
+	void		PreProcess();
 	void		Process();
+	void		PostProcess();
 
+	TCPServer	*server_;
 	int			socket_;
-	struct sockaddr addr_info_;
+	struct sockaddr_in addr_info_;
+	uint32_t	timeout_;
 
 	uint8_t	*	receive_buffer_;
 	uint32_t	receive_buffer_len_;

@@ -130,7 +130,7 @@ RetValue	TCPClient::Send
 	send_len = send(socket_, _frame, _frame_len, MSG_DONTWAIT);
 	if (send_len != _frame_len)
 	{
-		ret_value = RET_VALUE_SEND_FAILED;
+		ret_value = RET_VALUE_SOCKET_SEND_FAILED;
 		ERROR(this, ret_value, "Failed to send frame!");
 		return	ret_value;	
 	}
