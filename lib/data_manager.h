@@ -61,6 +61,7 @@ private:
 	void		PreProcess();
 	void		Process();
 	void		PostProcess();
+
 };
 
 #endif

@@ -16,229 +16,294 @@ RetValue	ShellCommandDevice
 	Shell<ObjectManager>* _shell
 )
 {
+	ASSERT(_arguments != NULL);
+	ASSERT(_shell != NULL);
+
 	RetValue	ret_value = RET_VALUE_OK;
 	ObjectManager*	object_manager = _shell->Data();
 
-	if (object_manager == NULL)
+	ASSERT(object_manager != NULL);
+
+	if (_count == 1)
 	{
-		ret_value = RET_VALUE_OBJECT_MANAGER_NOT_INITIALIZED;	
+		object_manager->ShowDeviceList();
+		goto finished;
 	}
-	else 
+
+	if (IsCorrectOption(_arguments[1], "create"))
 	{
-		if (_count == 1)
+		if (_count < 3)
 		{
-			object_manager->ShowDeviceList();
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;
+			goto finished;
 		}
-		else if ((_count >= 3) && (_arguments[1] == "create"))
+
+		Device::Type	type = Device::StringToType(_arguments[2]);
+		if (type == Device::TYPE_UNKNOWN)
 		{
-			Device::Type	type = Device::StringToType(_arguments[2]);
-			if (type == Device::TYPE_UNKNOWN)
+			_shell->Out() << "Failed to create device[" << _arguments[2] <<"]!" << endl;
+		}
+		else
+		{
+			uint32	index = 3;
+
+			Device::Properties	*properties = Device::Properties::Create(type);
+			if (properties == NULL)
 			{
-				_shell->Out() << "Failed to create device[" << _arguments[2] <<"]!" << endl;
+				_shell->Out() << "Invalid device type [" << type << "]" << endl;
+				ret_value = RET_VALUE_INVALID_ARGUMENTS;	
 			}
 			else
 			{
-				uint32	index = 3;
-
-				Device::Properties	*properties = Device::Properties::Create(type);
-				if (properties == NULL)
+				while(index < _count)
 				{
-					_shell->Out() << "Invalid device type [" << type << "]" << endl;
-					ret_value = RET_VALUE_INVALID_ARGUMENTS;	
-				}
-				else
-				{
-					while(index < _count)
+					if (IsCorrectOption(_arguments[index], "--id"))
 					{
-						if (IsCorrectOption(_arguments[index], "--id"))
+						if(index+1 < _count)
 						{
-							if(index+1 < _count)
-							{
-								properties->id = _arguments[index+1];	
-							}
-							else
-							{
-								ret_value = RET_VALUE_INVALID_ARGUMENTS;
-								_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
-								break;	
-							}
-
-							index += 2;
-						}
-						else if (IsCorrectOption(_arguments[index], "--name"))
-						{
-							if(index+1 < _count)
-							{
-								properties->name = _arguments[index+1];	
-							}
-							else
-							{
-								ret_value = RET_VALUE_INVALID_ARGUMENTS;
-								_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
-								break;	
-							}
-
-							index += 2;
-						}
-						else if (IsCorrectOption(_arguments[index], "--peer"))
-						{
-							if(index+1 < _count)
-							{
-								properties->name = _arguments[index+1];	
-							}
-							else
-							{
-								ret_value = RET_VALUE_INVALID_ARGUMENTS;
-								_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
-								break;	
-							}
-
-							index += 2;
+							properties->id = _arguments[index+1];	
 						}
 						else
 						{
 							ret_value = RET_VALUE_INVALID_ARGUMENTS;
-							_shell->Out() << "Invalid argument option[" << _arguments[index] << "]" << endl;
+							_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
 							break;	
 						}
+
+						index += 2;
 					}
-
-					if (ret_value == RET_VALUE_OK)
+					else if (IsCorrectOption(_arguments[index], "--name"))
 					{
-						ret_value = object_manager->CreateDevice(properties);
-						if (ret_value != RET_VALUE_OK)
+						if(index+1 < _count)
 						{
-							_shell->Out() << "Failed to create device[" << _arguments[2] << "] at object manager!" << endl;
-						}
-					}
-
-					delete properties;
-				}
-			}
-		}
-		else if ((_count >= 3) && (_arguments[1] == "delete"))
-		{
-			uint32	index;
-
-			for(index = 2; index < _count ; index++)
-			{
-				ret_value = object_manager->DestroyDevice(_arguments[index]);
-				if (ret_value == RET_VALUE_OK)
-				{
-					_shell->Out() << "The device[" << _arguments[index] << "] was detached." << endl;
-				}
-				else
-				{
-					_shell->Out() << "Failed to detach the device[" << _arguments[index] << "]." << endl;
-				}
-			}
-		}
-		else 
-		{
-			Device*	device = object_manager->GetDevice(_arguments[1]);	
-			if (device == NULL)
-			{
-				_shell->Out() << "Device[" << _arguments[1] << "] not found!" << endl;
-				ret_value = RET_VALUE_OBJECT_NOT_FOUND;	
-			}
-			else
-			{
-				switch(_count)
-				{
-				case	2:
-					{
-						device->Show(_shell->Out());
-					}
-					break;
-
-				case	3:
-					{
-						if (IsCorrectOption(_arguments[2], "type"))
-						{
-							_shell->Out() << "The deive[" << _arguments[1] << "] type is " << Device::TypeToString(device->GetType()) << endl;
-						}
-						else if (IsCorrectOption(_arguments[2], "name"))
-						{
-							_shell->Out() << "The deive[" << _arguments[1] << "] name is " << device->GetName() << endl;
-						}
-						else if (IsCorrectOption(_arguments[2], "state"))
-						{
-							_shell->Out() << "The deive[" << _arguments[1] << "] state is " << (device->GetEnable()?"enabled":"disabled") << endl;
-						}
-						else if (IsCorrectOption(_arguments[2],"enable"))
-						{
-							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], true);
-							if (ret_value == RET_VALUE_OK)
-							{
-								_shell->Out() << "The device[" << _arguments[1] << "] is enabled." << endl;
-							}
-							else
-							{
-								_shell->Out() << "Error : Failed to enable the device[" << _arguments[1] << "]." << endl;
-							}
-						}
-						else if (IsCorrectOption(_arguments[2], "disable"))
-						{
-							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], false);
-							if (ret_value == RET_VALUE_OK)
-							{
-								_shell->Out() << "The device[" << _arguments[1] << "] is disabled." << endl;
-							}
-							else
-							{
-								_shell->Out() << "Error : Failed to disable the device[" << _arguments[1] << "]." << endl;
-							}
-						}
-						else if (IsCorrectOption(_arguments[2], "activate"))
-						{
-							ret_value = object_manager->SetDeviceActivation(_arguments[1], true);
-							if (ret_value == RET_VALUE_OK)
-							{
-								_shell->Out() << "The device[" << _arguments[1] << "] is activated." << endl;
-							}
-							else
-							{
-								_shell->Out() << "Error : The device[" << _arguments[1] << "] is failed to activation." << endl;
-							}
-						}
-						else if (IsCorrectOption(_arguments[2], "deactivate"))
-						{
-							ret_value = object_manager->SetDeviceActivation(_arguments[1], false);
-							if (ret_value == RET_VALUE_OK)
-							{
-								_shell->Out() << "The device[" << _arguments[1] << "] is deactivated." << endl;
-							}
-							else
-							{
-								_shell->Out() << "The device[" << _arguments[1] << "] is failed to deactivation." << endl;
-							}
+							properties->name = _arguments[index+1];	
 						}
 						else
 						{
-							ret_value = RET_VALUE_NOT_SUPPORTED_FUNCTION;	
+							ret_value = RET_VALUE_INVALID_ARGUMENTS;
+							_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
+							break;	
 						}
-					}
-					break;
 
-				case	4:
-					{
-						if (IsCorrectOption(_arguments[2], "name") || IsCorrectOption(_arguments[2], "peer") || IsCorrectOption(_arguments[2], "community"))
-						{
-							ret_value = object_manager->SetDeviceProperty(_arguments[1], _arguments[2], _arguments[3]);
-							if (ret_value == RET_VALUE_OK)
-							{
-								_shell->Out() << "The deive[" << _arguments[1] << "] " << _arguments[2] << " was changed to  " << _arguments[3] << endl;
-							}
-							else 
-							{
-								_shell->Out() << "Failed to change " << _arguments[2] << " of deive[" << _arguments[1] << "]" << endl;
-							}
-						}
+						index += 2;
 					}
+					else if (IsCorrectOption(_arguments[index], "--peer"))
+					{
+						if(index+1 < _count)
+						{
+							properties->name = _arguments[index+1];	
+						}
+						else
+						{
+							ret_value = RET_VALUE_INVALID_ARGUMENTS;
+							_shell->Out() << "Invalid argument option[" << _arguments[index+1] << "]" << endl;
+							break;	
+						}
+
+						index += 2;
+					}
+					else
+					{
+						ret_value = RET_VALUE_INVALID_ARGUMENTS;
+						_shell->Out() << "Invalid argument option[" << _arguments[index] << "]" << endl;
+						break;	
+					}
+				}
+
+				if (ret_value == RET_VALUE_OK)
+				{
+					ret_value = object_manager->CreateDevice(properties);
+					if (ret_value != RET_VALUE_OK)
+					{
+						_shell->Out() << "Failed to create device[" << _arguments[2] << "] at object manager!" << endl;
+					}
+				}
+
+				delete properties;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "delete"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;	
+			goto finished;
+		}
+
+		uint32	index;
+
+		for(index = 2; index < _count ; index++)
+		{
+			ret_value = object_manager->DestroyDevice(_arguments[index]);
+			if (ret_value == RET_VALUE_OK)
+			{
+				_shell->Out() << "The device[" << _arguments[index] << "] was detached." << endl;
+			}
+			else
+			{
+				_shell->Out() << "Failed to detach the device[" << _arguments[index] << "]." << endl;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "show"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;	
+			goto finished;
+		}
+	
+		for(uint32_t i = 2 ; i < _count ; i++)
+		{
+			Device*	device = object_manager->GetDevice(_arguments[i]);	
+			if (device != NULL)
+			{
+				device->Show(_shell->Out());
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "start"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;	
+			goto finished;
+		}
+	
+		for(uint32_t i = 2 ; i < _count ; i++)
+		{
+			ret_value = object_manager->SetDeviceActivation(_arguments[i], true);
+			if (ret_value == RET_VALUE_OK)
+			{
+				_shell->Out() << "The device[" << _arguments[i] << "] was started." << endl;
+			}
+			else
+			{
+				_shell->Out() << "Error : The device[" << _arguments[i] << "] is failed to start." << endl;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "stop"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;	
+			goto finished;
+		}
+	
+		for(uint32_t i = 2 ; i < _count ; i++)
+		{
+			ret_value = object_manager->SetDeviceActivation(_arguments[i], false);
+			if (ret_value == RET_VALUE_OK)
+			{
+				_shell->Out() << "The device[" << _arguments[i] << "] was stopped." << endl;
+			}
+			else
+			{
+				_shell->Out() << "Error : The device[" << _arguments[i] << "] is failed to stop." << endl;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "enable"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
+		}
+
+		for(uint32_t i = 2 ; i < _count ; i++)
+		{
+			ret_value = object_manager->SetDeviceProperty(_arguments[i], _arguments[1], true);
+			if (ret_value == RET_VALUE_OK)
+			{
+				_shell->Out() << "The device[" << _arguments[i] << "] was enabled." << endl;
+			}
+			else
+			{
+				_shell->Out() << "The device[" << _arguments[i] << "] is failed to enable." << endl;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "disable"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
+		}
+
+		for(uint32_t i = 2 ; i < _count ; i++)
+		{
+			ret_value = object_manager->SetDeviceProperty(_arguments[i], _arguments[1], false);
+			if (ret_value == RET_VALUE_OK)
+			{
+				_shell->Out() << "The device[" << _arguments[i] << "] was disabled." << endl;
+			}
+			else
+			{
+				_shell->Out() << "The device[" << _arguments[i] << "] is failed to disable." << endl;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "set"))
+	{	
+		if (_count < 5)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;	
+			goto finished;
+		}
+	
+		Device*	device = object_manager->GetDevice(_arguments[2]);	
+		if (device == NULL)
+		{
+			_shell->Out() << "Device[" << _arguments[2] << "] not found!" << endl;
+			ret_value = RET_VALUE_OBJECT_NOT_FOUND;	
+			goto finished;
+		}
+
+		for(uint32_t i = 3 ; i + 1 < _count ; i+=2)
+		{
+			if (IsCorrectOption(_arguments[i], "--name") || IsCorrectOption(_arguments[i], "--peer") || IsCorrectOption(_arguments[i], "--community"))
+			{
+				ret_value = object_manager->SetDeviceProperty(_arguments[2], _arguments[i].substr(2), _arguments[i+1]);
+				if (ret_value == RET_VALUE_OK)
+				{
+					_shell->Out() << "The deive[" << _arguments[2] << "] " << _arguments[i].substr(2) << " was changed to " << _arguments[i+1] << endl;
+				}
+				else 
+				{
+					_shell->Out() << "Failed to change " << _arguments[i].substr(2) << " of deive[" << _arguments[2] << "]" << endl;
+				}
+			}
+			else if (IsCorrectOption(_arguments[i], "--enable"))
+			{
+				bool	enable = false;
+
+				if (IsCorrectOption(_arguments[i+1], "true") || IsCorrectOption(_arguments[i+1], "yes") ||IsCorrectOption(_arguments[i+1], "on"))
+				{	
+					enable = true;
+				}
+				else if (IsCorrectOption(_arguments[i+1], "false") || IsCorrectOption(_arguments[i+1], "no") ||IsCorrectOption(_arguments[i+1], "off"))
+				{	
+					enable = false;
+				}
+
+				ret_value = object_manager->SetEndpointProperty(_arguments[2], _arguments[i].substr(2), enable);
+				if (ret_value == RET_VALUE_OK)
+				{
+					_shell->Out() << "The device[" << _arguments[2] << "] was " << ((enable)?"enabled":"disabled") << endl;
+				}
+				else 
+				{
+					_shell->Out() << "The device[" << _arguments[2] << "] is failed to " << _arguments[i].substr(2) << endl;
 				}
 			}
 		}
 	}
+
+finished:
 
 	if (ret_value == RET_VALUE_NOT_SUPPORTED_FUNCTION)
 	{
@@ -252,6 +317,7 @@ RetValue	ShellCommandDevice
 		_shell->Out() << endl;
 	}
 
+
 	return	ret_value;
 }
 
@@ -262,11 +328,22 @@ ShellCommand<ObjectManager>	object_manager_command_device =
 				"\tManagement of device.\n"
 				"COMMANDS:\n"
 				"\tcreate <TYPE> [OPTIONS]\n"
+				"\t\tCreate new device\n"
+				"\tstart <ID> ...\n"
+				"\t\tActivate the devices.\n"
+				"\tstop <ID> ...\n"
+				"\t\tDeactivate the devices.\n"
+				"\tset <ID> [OPTIONS]\n"
+				"\t\tSet device attributes.\n"
 				"OPTIONS:\n"
 				"\t--id <ID>\n"
 				"\t\tUnique identifier\n"
 				"\t--name <NAME>\n"
-				"\t\tName\n",
+				"\t\tName\n"
+				"\t--peer <ADDRESS>\n"
+				"\t\tTarget device address(IP, Port, ID, ...)\n"
+				"\t--community <COMMUNITY>\n"
+				"\t\tCommunity for the SNMP\n",
 	.short_help	= "Management of device.",
 	.function	= ShellCommandDevice
 };

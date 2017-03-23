@@ -66,6 +66,8 @@ public:
 		uint32		GetOptionsSize();
 		virtual
 		uint32		GetOptions(uint8_t *options, uint32 options_len);
+		virtual
+		uint32		GetOptions(char *options, uint32 options_len);
 
 		Type		type;
 		std::string	id;
@@ -153,6 +155,8 @@ public:
 	Type			StringToType(const std::string& _name);
 	static 	const
 	std::string&	TypeToString(Type _type);
+
+	RetValue		Show(std::ostream& _os);
 
 	friend	
 	std::ostream& 	operator<<(std::ostream& _os, const Endpoint& _ep);

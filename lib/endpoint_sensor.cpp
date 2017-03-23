@@ -1,6 +1,7 @@
 #include "endpoint.h"
 #include "trace.h"
 #include "KompexSQLiteException.h"
+#include "string_utils.h"
 
 using namespace std;
 
@@ -43,7 +44,11 @@ RetValue	EndpointSensor::Properties::Set
 		ret_value = Endpoint::Properties::Set(_statement);
 		if (ret_value == RET_VALUE_OK)
 		{
-			memcpy(&options, _statement->GetColumnBlob("_options"), sizeof(Options));
+			string options_string = _statement->GetColumnString("_options");
+			if (options_string.length() != 0)
+			{
+				StringToBin(options_string.c_str(), options_string.length(), (uint8_t *)&options, sizeof(options));
+			}
 		}
 	}
 	catch (Kompex::SQLiteException &exception)
@@ -142,6 +147,20 @@ uint32	EndpointSensor::Properties::GetOptions
 		memcpy(_options, &options, sizeof(options));
 
 		return	sizeof(options);
+	}
+
+	return	0;
+}
+
+uint32	EndpointSensor::Properties::GetOptions
+(
+	char *_buffer, 
+	uint32 _buffer_len
+)
+{
+	if (_buffer_len >= sizeof(Options)*2+1)
+	{
+		return	BinToString((uint8_t *)&options, sizeof(options), _buffer, _buffer_len);
 	}
 
 	return	0;

@@ -19,6 +19,7 @@ struct	EndpointTypeInfo
 	{ Endpoint::HUMIDITY_SENSOR, 			"humidity"	},
 	{ Endpoint::VOLTAGE_SENSOR, 			"voltage"	},
 	{ Endpoint::CURRENT_SENSOR, 			"Current"	},
+	{ Endpoint::DI_SENSOR,	"digital_input"		},
 	{ Endpoint::DO_CONTROL,	"digital_output"		},
 	{ Endpoint::DO_CONTROL,	"do"		},
 	{ Endpoint::UNKNOWN, 	""		}
@@ -399,6 +400,15 @@ uint32	Endpoint::Properties::GetOptions
 	return	0;
 }
 
+uint32	Endpoint::Properties::GetOptions
+(
+	char *options, 
+	uint32_t options_len
+)
+{
+	return	0;
+}
+
 ////////////////////////////////////////////////////
 // Class Endpoint
 ////////////////////////////////////////////////////
@@ -618,7 +628,7 @@ RetValue	Endpoint::SetProperty
 
 	if (_name == "enable")
 	{
-		properties_->enable = _value;	
+		ret_value = SetEnable(_value);	
 	}
 	else
 	{
@@ -1040,6 +1050,16 @@ void	Endpoint::ReleaseParent()
 	{
 		parent_ = NULL;
 	}
+}
+
+RetValue	Endpoint::Show(ostream& _os)
+{
+	_os << setw(16) << "Type : " << TypeToString(properties_->type) << endl;
+	_os << setw(16) << "ID : " << properties_->id << endl;
+	_os << setw(16) << "Name : " << properties_->name << endl;
+	_os << setw(16) << "Value Count : " << properties_->value_count << endl;
+
+	return	RET_VALUE_OK;
 }
 
 //////////////////////////////////////////////////////////////////////////

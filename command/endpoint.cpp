@@ -16,344 +16,466 @@ RetValue	ShellCommandEndpoint
 	Shell<ObjectManager>* _shell
 )
 {
+	ASSERT(_arguments != NULL);
+	ASSERT(_shell != NULL);
+
 	RetValue	ret_value = RET_VALUE_OK;
 
 	ObjectManager*object_manager = _shell->Data();
+	ASSERT(object_manager != NULL);
 
-	if (object_manager == NULL)
+	if (_count == 1)
 	{
-		ret_value = RET_VALUE_OBJECT_MANAGER_NOT_INITIALIZED;	
+		object_manager->ShowEndpointList();
+		goto finished;
 	}
-	else
+
+	if (IsCorrectOption(_arguments[1], "create"))
 	{
-		if (_count == 1)
+		if (_count < 5)
 		{
-			object_manager->ShowEndpointList();
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;
+			goto finished;
 		}
-		else if (IsCorrectOption(_arguments[1],"create"))
+
+		Endpoint::Type	type = Endpoint::StringToType(_arguments[2]);
+		if (type == Endpoint::UNKNOWN)
 		{
-			Endpoint::Type	type = Endpoint::StringToType(_arguments[2]);
-			if (type == Endpoint::UNKNOWN)
+			ret_value = RET_VALUE_INVALID_TYPE;
+			_shell->Out() << "Error : Unknown endpoint type[" << _arguments[2] <<"]!" << endl;
+			goto finished;
+		}
+
+		Endpoint::Properties	*properties = Endpoint::Properties::Create(type);
+		if (properties == NULL)
+		{
+			ret_value = RET_VALUE_INVALID_TYPE;
+			_shell->Out() << "Error : Not supported endpoint[" << _arguments[2] << "]!" << endl;	
+			goto finished;
+		}
+
+		for(uint32_t i = 3 ; i+1 < _count ; i+=2)
+		{
+			if (IsCorrectOption(_arguments[i], "--device_id"))
 			{
-				_shell->Out() << "Failed to create endpoint[" << _arguments[2] <<"]!" << endl;
+				properties->device_id = _arguments[i+1];
+			}
+			else if (IsCorrectOption(_arguments[i], "--id"))
+			{
+				properties->id = _arguments[i+1];
+			}
+			else if (IsCorrectOption(_arguments[i], "--name"))
+			{
+				properties->name = _arguments[i+1];
+			}
+			else if (IsCorrectOption(_arguments[i], "--index"))
+			{
+				properties->index = atoi(_arguments[i+1].c_str());
 			}
 			else
 			{
-				Device*		device;
-
-				device = object_manager->GetDevice(_arguments[3]);
-				if (device != NULL)
-				{
-					Endpoint::Properties	*properties = Endpoint::Properties::Create(type);
-					if (properties == NULL)
-					{
-						ret_value = RET_VALUE_INVALID_ARGUMENTS;	
-					}
-					else
-					{
-						properties->device_id = _arguments[3];
-						uint32_t	index = 4;
-						while(index < _count)
-						{
-							if (caseInsCompare(_arguments[index].c_str(), "-id"))
-							{
-								if(index+1 < _count)
-								{
-									properties->id = _arguments[index+1];	
-								}
-								else
-								{
-									ret_value = RET_VALUE_INVALID_ARGUMENTS;
-									break;	
-								}
-
-								index += 2;
-							}
-							else if (caseInsCompare(_arguments[index].c_str(), "-name"))
-							{
-								if(index+1 < _count)
-								{
-									properties->name = _arguments[index+1];	
-								}
-								else
-								{
-									ret_value = RET_VALUE_INVALID_ARGUMENTS;
-									break;	
-								}
-
-								index += 2;
-							}
-							else if (caseInsCompare(_arguments[index].c_str(), "-index"))
-							{
-								if(index+1 < _count)
-								{
-									properties->index = atoi(_arguments[index+1].c_str());
-								}
-								else
-								{
-									ret_value = RET_VALUE_INVALID_ARGUMENTS;
-									break;	
-								}
-
-								index += 2;
-							}
-							else
-							{
-								ret_value = RET_VALUE_INVALID_ARGUMENTS;
-								break;	
-							}
-						}
-
-						if (ret_value == RET_VALUE_OK)
-						{
-							ret_value = object_manager->CreateEndpoint(properties);
-							if (ret_value != RET_VALUE_OK)
-							{
-								_shell->Out() << "Failed to create endpoint[" << _arguments[2] <<"]!" << endl;
-							}
-							else
-							{
-								_shell->Out() << "The endpoint[" << _arguments[2] << "] was succefully created." << endl;
-							}
-						}
-
-						delete properties;
-					}
-				}
-				else
-				{
-					_shell->Out() << "Unknown device : " << _arguments[3] << endl;	
-				}
+				ret_value = RET_VALUE_INVALID_ARGUMENTS;
+				break;
 			}
 		}
-		else if (IsCorrectOption(_arguments[1], "delete"))
-		{
-			uint32_t	index;
 
-			for(index = 2; index < _count ; index++)
-			{
-				ret_value = object_manager->DestroyEndpoint(_arguments[index]);
-				if (ret_value == RET_VALUE_OK)
-				{
-					_shell->Out() << "The endpoint[" << _arguments[index] << "] was detached." << endl;
-				}
-				else
-				{
-					_shell->Out() << "Failed to detach the endpoint[" << _arguments[index] << "]." << endl;
-				}
-			}
-		}
-		else if (IsCorrectOption(_arguments[1], "activate"))
+		if (ret_value != RET_VALUE_OK)
 		{
-			if (_count == 2)
+			delete properties;	
+			goto finished;
+		}
+
+		ret_value = object_manager->CreateEndpoint(properties);
+		if (ret_value != RET_VALUE_OK)
+		{
+			_shell->Out() << "Failed to create endpoint[" << _arguments[2] <<"]!" << endl;
+		}
+		else
+		{
+			_shell->Out() << "The endpoint[" << _arguments[2] << "] was succefully created." << endl;
+		}
+
+		delete properties;
+	}
+	else if (IsCorrectOption(_arguments[1], "delete"))
+	{
+		uint32_t	index;
+
+		for(index = 2; index < _count ; index++)
+		{
+			ret_value = object_manager->DestroyEndpoint(_arguments[index]);
+			if (ret_value == RET_VALUE_OK)
 			{
-				ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+				_shell->Out() << "The endpoint[" << _arguments[index] << "] was detached." << endl;
 			}
 			else
 			{
-				
-				if (IsCorrectOption(_arguments[2], "all"))
-				{
-					for(uint32 i = 0 ; i < object_manager->GetEndpointCount() ; i++)
-					{
-						Endpoint*	endpoint = object_manager->GetEndpoint(i);
-						if (endpoint != NULL)
-						{
-							ret_value = endpoint->Start();	
-							if (ret_value == RET_VALUE_OK)
-							{
-								cout << "The endpoint[" << endpoint->GetID() << "] is activated." << endl;
-							}
-							else
-							{
-								cout << "The endpoint[" << endpoint->GetID() << "] is failed to activation." << endl;
-							}
-						}
-						else
-						{
-							cout << i << "th endpoint not exist!" << endl;
-						}
-					
-					}
-				}
-				else
-				{
-					Endpoint *endpoint = object_manager->GetEndpoint(_arguments[2]);
-					if (endpoint == NULL)
-					{
-						cout << "Error : Failed to get endpoint[" << _arguments[2] << "]." << endl;
-					}
-					else
-					{
-						ret_value = endpoint->Start();
-						if (ret_value == RET_VALUE_OK)
-						{
-							cout << "The endpoint[" << _arguments[2] << "] was activated.";
-						}
-						else
-						{
-							cout << "The endpoint[" << _arguments[2] << "] can't activate. - [Ret: " << ret_value << "]";
-						}
-					}
-				}
+				_shell->Out() << "Failed to detach the endpoint[" << _arguments[index] << "]." << endl;
 			}
 		}
-		else if (IsCorrectOption(_arguments[1], "deactivate"))
+	}
+	else if (IsCorrectOption(_arguments[1], "start"))
+	{
+		if (_count < 3)
 		{
-			if (_count == 2)
-			{
-				ret_value = RET_VALUE_INVALID_ARGUMENTS;		
-			}
-			else
-			{
-				if (IsCorrectOption(_arguments[2], "all"))
-				{
-					for(uint32 i = 0 ; i < object_manager->GetEndpointCount() ; i++)
-					{
-						Endpoint*	endpoint = object_manager->GetEndpoint(i);
-						if (endpoint != NULL)
-						{
-							ret_value = endpoint->Stop();	
-							if (ret_value == RET_VALUE_OK)
-							{
-								cout << "The endpoint[" << _arguments[2] << "] was deactivated.";
-							}
-							else
-							{
-								cout << "The endpoint[" << _arguments[2] << "] can't deactivate. - [Ret: " << ret_value << "]";
-							}
-						}
-						else
-						{
-							cout << i << "th endpoint not exist!" << endl;
-						}
-					
-					}
-				}
-				else
-				{
-					Endpoint *endpoint = object_manager->GetEndpoint(_arguments[2]);
-					if (endpoint == NULL)
-					{
-						cout << "Error : Failed to get endpoint[" << _arguments[2] << "]." << endl;
-					}
-					else
-					{
-						ret_value = endpoint->Stop();
-						if (ret_value == RET_VALUE_OK)
-						{
-							cout << "The endpoint[" << _arguments[2] << "] was deactivated.";
-						}
-						else
-						{
-							cout << "The endpoint[" << _arguments[2] << "] can't deactivate. - [Ret: " << ret_value << "]";
-						}
-					}
-				}
-			}
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
 		}
-		else 
+
+
+		if (IsCorrectOption(_arguments[2], "all"))
 		{
-			Endpoint *endpoint = object_manager->GetEndpoint(_arguments[1]);	
-			if (endpoint == NULL)
+			for(uint32 i = 0 ; i < object_manager->GetEndpointCount() ; i++)
 			{
-				cout << "Endpoint not found!" << endl;
-				ret_value = RET_VALUE_OBJECT_NOT_FOUND;	
-			}
-			else
-			{
-				if (_count == 2)
-				{
-					cout << setw(16) << "Type : " << Endpoint::TypeToString(endpoint->GetType()) << endl;
-					cout << setw(16) << "ID : " << endpoint->GetID() << endl;
-					cout << setw(16) << "Name : " << endpoint->GetName() << endl;
-					cout << setw(16) << "Value Count : " << endpoint->ValueCount() << endl;
-				}
-				else if (IsCorrectOption(_arguments[2], "value"))
-				{
-					uint32_t	count = endpoint->ValueCount();
-
-					if (count != 0)
-					{
-
-						TimedValue*	value_list = new TimedValue[count];
-
-						count = endpoint->GetValueList(value_list, count);
-						for(uint32_t i = 0 ; i < count ; i++)
-						{
-							Time	time = value_list[i].GetTime();
-							cout <<  time.ToString() << " : " << value_list[i].ToString() << endl;
-						}
-
-						delete [] value_list;
-					}
-				}
-				else if (IsCorrectOption(_arguments[2], "enable"))
-				{
-					ret_value = object_manager->SetEndpointProperty(_arguments[1], _arguments[2], true);	
-					if (ret_value == RET_VALUE_OK)
-					{
-						cout << "The endpoint[" << endpoint->GetID() << "] is enabled." << endl;
-					}
-					else
-					{
-						cout << "The endpoint[" << endpoint->GetID() << "] is failed to enable." << endl;
-					}
-				}
-				else if (IsCorrectOption(_arguments[2], "disable"))
-				{
-					ret_value = object_manager->SetEndpointProperty(_arguments[1], _arguments[2], false);	
-					if (ret_value == RET_VALUE_OK)
-					{
-						cout << "The endpoint[" << endpoint->GetID() << "] is disabled." << endl;
-					}
-					else
-					{
-						cout << "The endpoint[" << endpoint->GetID() << "] is failed to disable." << endl;
-					}
-				}
-				else if (IsCorrectOption(_arguments[2], "activate"))
+				Endpoint*	endpoint = object_manager->GetEndpoint(i);
+				if (endpoint != NULL)
 				{
 					ret_value = endpoint->Start();	
 					if (ret_value == RET_VALUE_OK)
 					{
-						cout << "The endpoint[" << endpoint->GetID() << "] is activated." << endl;
+						_shell->Out() << "The endpoint[" << endpoint->GetID() << "] was started." << endl;
 					}
 					else
 					{
-						cout << "The endpoint[" << endpoint->GetID() << "] is failed to activation." << endl;
-					}
-				}
-				else if (IsCorrectOption(_arguments[2], "deactivate"))
-				{
-					ret_value = endpoint->Stop();	
-					if (ret_value == RET_VALUE_OK)
-					{
-						cout << "The endpoint[" << endpoint->GetID() << "] is deactivated." << endl;
-					}
-					else
-					{
-						cout << "The endpoint[" << endpoint->GetID() << "] is failed to deactivation." << endl;
+						_shell->Out() << "The endpoint[" << endpoint->GetID() << "] is failed to start." << endl;
 					}
 				}
 				else
 				{
-					ret_value = RET_VALUE_NOT_SUPPORTED_FUNCTION;	
+					_shell->Out() << i << "th endpoint not exist!" << endl;
+				}
+
+			}
+		}
+		else
+		{
+			for(uint32_t i = 2 ; i < _count ; i++)
+			{
+				Endpoint *endpoint = object_manager->GetEndpoint(_arguments[i]);
+				if (endpoint == NULL)
+				{
+					_shell->Out() << "Error : Failed to get endpoint[" << _arguments[i] << "]." << endl;
+				}
+				else
+				{
+					ret_value = endpoint->Start();
+					if (ret_value == RET_VALUE_OK)
+					{
+						_shell->Out() << "The endpoint[" << _arguments[i] << "] was started.";
+					}
+					else
+					{
+						_shell->Out() << "The endpoint[" << _arguments[i] << "] is failed to start. - [Ret: " << ret_value << "]";
+					}
+				}
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "stop"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
+		}
+
+		if (IsCorrectOption(_arguments[2], "all"))
+		{
+			for(uint32 i = 0 ; i < object_manager->GetEndpointCount() ; i++)
+			{
+				Endpoint*	endpoint = object_manager->GetEndpoint(i);
+				if (endpoint != NULL)
+				{
+					ret_value = endpoint->Stop();	
+					if (ret_value == RET_VALUE_OK)
+					{
+						_shell->Out() << "The endpoint[" << _arguments[2] << "] was deactivated.";
+					}
+					else
+					{
+						_shell->Out() << "The endpoint[" << _arguments[2] << "] can't deactivate. - [Ret: " << ret_value << "]";
+					}
+				}
+				else
+				{
+					_shell->Out() << i << "th endpoint not exist!" << endl;
+				}
+
+			}
+		}
+		else
+		{
+			for(uint32_t i = 2 ; i < _count ; i++)
+			{
+				Endpoint *endpoint = object_manager->GetEndpoint(_arguments[i]);
+				if (endpoint == NULL)
+				{
+					_shell->Out() << "Error : Failed to get endpoint[" << _arguments[i] << "]." << endl;
+				}
+				else
+				{
+					ret_value = endpoint->Stop();
+					if (ret_value == RET_VALUE_OK)
+					{
+						_shell->Out() << "The endpoint[" << _arguments[i] << "] was deactivated.";
+					}
+					else
+					{
+						_shell->Out() << "The endpoint[" << _arguments[i] << "] can't deactivate. - [Ret: " << ret_value << "]";
+					}
+				}
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "show"))
+	{
+		if ((_count < 3) || IsCorrectOption(_arguments[2], "all"))
+		{
+			for(uint32_t i = 0 ; i < object_manager->GetEndpointCount() ; i++)
+			{
+				Endpoint *endpoint = object_manager->GetEndpoint(i);	
+				if (endpoint == NULL)
+				{
+					_shell->Out() << "Error : Endpoint[" << _arguments[i] << "] not found!" << endl;
+				}
+				else
+				{
+					endpoint->Show(_shell->Out());
+				}
+			}
+		}
+		else
+		{
+			for(uint32_t i = 2 ; i < _count ; i++)
+			{
+				Endpoint *endpoint = object_manager->GetEndpoint(_arguments[i]);	
+				if (endpoint == NULL)
+				{
+					_shell->Out() << "Error : Endpoint[" << _arguments[i] << "] not found!" << endl;
+				}
+				else
+				{
+					endpoint->Show(_shell->Out());
+				}
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "value"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
+		}
+
+		Endpoint*	endpoint = object_manager->GetEndpoint(_arguments[2]);
+		if (endpoint == NULL)
+		{
+			_shell->Out() << "Error : Endpoint[" << _arguments[2] << "] not found!" << endl;
+			ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+			goto finished;	
+		}
+
+		uint32_t	count = endpoint->ValueCount();
+		_shell->Out() << "[ Endpoint Values ]" << endl;
+		_shell->Out() << setw(16) << "Count" << " : " << count << endl << endl;
+		if (count != 0)
+		{
+
+			TimedValue*	value_list = new TimedValue[count];
+
+			count = endpoint->GetValueList(value_list, count);
+			for(uint32_t i = 0 ; i < count ; i++)
+			{
+				Time	time = value_list[i].GetTime();
+				_shell->Out() <<  setw(4) << i << " " << time.ToString() << " : " << value_list[i].ToString() << endl;
+			}
+
+			delete [] value_list;
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "enable"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
+		}
+
+		for(uint32_t i = 2 ; i < _count ; i++)
+		{
+			ret_value = object_manager->SetEndpointProperty(_arguments[i], _arguments[1], true);
+			if (ret_value == RET_VALUE_OK)
+			{
+				_shell->Out() << "The endpoint[" << _arguments[i] << "] was enabled." << endl;
+			}
+			else
+			{
+				_shell->Out() << "The endpoint[" << _arguments[i] << "] is failed to enable." << endl;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "disable"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
+		}
+
+		for(uint32_t i = 2 ; i < _count ; i++)
+		{
+			ret_value = object_manager->SetEndpointProperty(_arguments[i], _arguments[1], false);
+			if (ret_value == RET_VALUE_OK)
+			{
+				_shell->Out() << "The endpoint[" << _arguments[i] << "] was disabled." << endl;
+			}
+			else
+			{
+				_shell->Out() << "The endpoint[" << _arguments[i] << "] is failed to disable." << endl;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "start"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
+		}
+
+		for(uint32_t i = 2 ; i < _count ; i++)
+		{
+			Endpoint*	endpoint = object_manager->GetEndpoint(_arguments[i]);
+			if (endpoint == NULL)
+			{
+				_shell->Out() << "Error : Endpoint[" << _arguments[2] << "] not found!" << endl;
+				ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+				goto finished;	
+			}
+
+			ret_value = endpoint->Start();
+			if (ret_value == RET_VALUE_OK)
+			{
+				_shell->Out() << "The endpoint[" << endpoint->GetID() << "] was started." << endl;
+			}
+			else
+			{
+				_shell->Out() << "The endpoint[" << endpoint->GetID() << "] is failed to start." << endl;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "stop"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
+		}
+
+		for(uint32_t i = 2 ; i < _count ; i++)
+		{
+			Endpoint*	endpoint = object_manager->GetEndpoint(_arguments[i]);
+			if (endpoint == NULL)
+			{
+				_shell->Out() << "Error : Endpoint[" << _arguments[2] << "] not found!" << endl;
+				ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+				goto finished;	
+			}
+
+			ret_value = endpoint->Stop();
+			if (ret_value == RET_VALUE_OK)
+			{
+				_shell->Out() << "The endpoint[" << endpoint->GetID() << "] was stopped." << endl;
+			}
+			else
+			{
+				_shell->Out() << "The endpoint[" << endpoint->GetID() << "] is failed to stop." << endl;
+			}
+		}
+	}
+	else if (IsCorrectOption(_arguments[1], "set"))
+	{
+		if (_count < 3)
+		{
+			ret_value = RET_VALUE_INVALID_ARGUMENTS;		
+			goto finished;
+		}
+
+		Endpoint*	endpoint = object_manager->GetEndpoint(_arguments[2]);
+		if (endpoint == NULL)
+		{
+			_shell->Out() << "Error : Endpoint[" << _arguments[2] << "] not found!" << endl;
+			ret_value = RET_VALUE_OBJECT_NOT_FOUND;
+			goto finished;	
+		}
+
+
+		for(uint32_t i = 3 ; i+1 < _count ; i+=2)
+		{
+			if (IsCorrectOption(_arguments[i], "--id") || IsCorrectOption(_arguments[i], "--name") || IsCorrectOption(_arguments[i], "--device_id"))
+			{
+				ret_value = object_manager->SetEndpointProperty(_arguments[2], _arguments[i].substr(2), _arguments[i+1]);
+				if (ret_value == RET_VALUE_OK)
+				{
+					_shell->Out() << "The deive[" << _arguments[2] << "] " << _arguments[i].substr(2) << " was changed to " << _arguments[i+1] << endl;
+				}
+				else 
+				{
+					_shell->Out() << "Failed to change " << _arguments[i].substr(2) << " of deive[" << _arguments[2] << "]" << endl;
+				}
+			}
+			else if (IsCorrectOption(_arguments[i], "--index") || IsCorrectOption(_arguments[i], "--update_interval") || IsCorrectOption(_arguments[i], "--value_count"))
+			{
+				uint32_t	value = strtoul(_arguments[i+1].c_str(), 0, 10);
+
+				ret_value = object_manager->SetEndpointProperty(_arguments[2], _arguments[i].substr(2), value);
+				if (ret_value == RET_VALUE_OK)
+				{
+					_shell->Out() << "The deive[" << _arguments[2] << "] " << _arguments[i].substr(2) << " was changed to " << _arguments[i+1] << endl;
+				}
+				else 
+				{
+					_shell->Out() << "Failed to change " << _arguments[i].substr(2) << " of deive[" << _arguments[2] << "]" << endl;
+				}
+			}
+			else if (IsCorrectOption(_arguments[i], "--enable"))
+			{
+				bool	enable = false;
+
+				if (IsCorrectOption(_arguments[i+1], "true") || IsCorrectOption(_arguments[i+1], "yes") ||IsCorrectOption(_arguments[i+1], "on"))
+				{	
+					enable = true;
+				}
+				else if (IsCorrectOption(_arguments[i+1], "false") || IsCorrectOption(_arguments[i+1], "no") ||IsCorrectOption(_arguments[i+1], "off"))
+				{	
+					enable = false;
+				}
+
+				ret_value = object_manager->SetEndpointProperty(_arguments[2], _arguments[i].substr(2), enable);
+				if (ret_value == RET_VALUE_OK)
+				{
+					_shell->Out() << "The endpoint[" << _arguments[2] << "] was " << ((enable)?"enabled":"disabled") << endl;
+				}
+				else 
+				{
+					_shell->Out() << "The endpoint[" << _arguments[2] << "] is failed to " << _arguments[i].substr(2) << endl;
 				}
 			}
 		}
 	}
 
+finished:
 	if (ret_value == RET_VALUE_NOT_SUPPORTED_FUNCTION)
 	{
-		cout << "Not supported command : ";
+		_shell->Out() << "Not supported command : ";
 
 		for(uint32_t i = 0 ; i < _count ; i++)
 		{
-			cout << _arguments[i] << " ";	
+			_shell->Out() << _arguments[i] << " ";	
 		}
 
-		cout << endl;
+		_shell->Out() << endl;
 	}
 
 
@@ -366,12 +488,21 @@ ShellCommand<ObjectManager>	object_manager_command_endpoint =
 	.help		= "<command>\n"
 				"\tManagement of endpoint.\n"
 				"COMMANDS:\n"
-				"\tcreate <TYPE> <DEVICE_ID> [OPTIONS]\n"
+				"\tcreate <TYPE> [OPTIONS]\n"
+				"\tcreate <TYPE> [OPTIONS]\n"
 				"OPTIONS:\n"
-				"\t-id <ID>\n"
+				"\t--id <ID>\n"
 				"\t\tUnique identifier\n"
-				"\t-name <NAME>\n"
+				"\t--name <NAME>\n"
 				"\t\tName\n"
+				"\t--index <INDEX>\n"
+				"\t\tThe index of the device's endpoint\n"
+				"\t--device_id <DEVICE_ID>\n"
+				"\t\tDevice id\n"
+				"\t--update_interval <MS>\n"
+				"\t\tData collection cycle time.\n"
+				"\t--value_count <COUNT>\n"
+				"\t\tMaximum number of saved data.\n"
 				"PARAMETERS:\n"
 				"\tTYPE\tEndpoint type.\n"
 				"\t\ttemperature\n"

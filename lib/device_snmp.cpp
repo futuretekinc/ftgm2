@@ -2,6 +2,7 @@
 #include "device_snmp.h"
 #include "trace.h"
 #include "snmp_client.h"
+#include "string_utils.h"
 #include "KompexSQLiteStatement.h"
 #include "KompexSQLiteException.h"
 
@@ -23,17 +24,24 @@ RetValue DeviceSNMP::Properties::Set
 )
 {
 	RetValue ret_value;
+	INFO(NULL, "DeviceSNMP::Properties::Set Properties");
 	
 	ret_value = Device::Properties::Set(_statement);
 	if (ret_value == RET_VALUE_OK)
 	{
 		try
 		{
-			Options* options = (Options *)_statement->GetColumnBlob("_options");
-			if (options != NULL)
+			string options_string = _statement->GetColumnString("_options");
+			if (options_string.length() != 0)
 			{
-				peer = options->peer;
-				community = options->community;
+				Options	options;
+
+				memset(&options, 0, sizeof(options));
+				INFO(NULL, "Option String Len : %d", options_string.length());
+				StringToBin(options_string.c_str(), options_string.length(), (uint8_t *)&options, sizeof(options));
+
+				peer = options.peer;
+				community = options.community;
 			}
 		}
 		catch(Kompex::SQLiteException& exception)
@@ -148,6 +156,25 @@ uint32	DeviceSNMP::Properties::GetOptions
 	return	0;
 }
 
+uint32	DeviceSNMP::Properties::GetOptions
+(
+	char *_buffer, 
+	uint32 _buffer_len
+)
+{
+	if (_buffer_len >= sizeof(Options)*2+1)
+	{
+		Options	options;
+
+		peer.copy(options.peer, sizeof(options.peer) - 1); 
+		community.copy(options.community, sizeof(options.community) - 1); 
+
+		return	BinToString((uint8_t *)&options, sizeof(options), _buffer, _buffer_len);
+	}
+
+	return	0;
+}
+
 ///////////////////////////////////////////////////////
 // Device for SNMP
 ///////////////////////////////////////////////////////
@@ -241,6 +268,8 @@ RetValue DeviceSNMP::SetProperties
 	{
 		Properties	*internal_properties = dynamic_cast<DeviceSNMP::Properties*>(properties_);
 
+		INFO(this, "Peer : %s", properties->peer.c_str());
+		INFO(this, "Community : %s", properties->community.c_str());
 		internal_properties->peer 		= properties->peer;
 		internal_properties->community 	= properties->community;
 	}

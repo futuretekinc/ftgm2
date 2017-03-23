@@ -109,6 +109,7 @@ RetValue Device::Properties::Set
 	Kompex::SQLiteStatement*	_statement
 )
 {
+	INFO(NULL, "Device::Properties::Set");
 	id 		= _statement->GetColumnString("_id");
 	name 	= _statement->GetColumnString("_name");
 	enable 	= _statement->GetColumnInt("_enable");
@@ -281,6 +282,15 @@ uint32	Device::Properties::GetOptions
 (
 	uint8_t *options, 
 	uint32 options_len
+)
+{
+	return	0;
+}
+
+uint32	Device::Properties::GetOptions
+(
+	char *buffer, 
+	uint32 buffer_len
 )
 {
 	return	0;
@@ -771,14 +781,11 @@ void Device::DeviceScheduleProcess
 	switch(_type)
 	{
 	case	Device::TYPE_SNMP:
-		INFO(NULL, "Device SNMP Created");
 		device = new DeviceSNMP(_type);
-		INFO(NULL, "Device SNMP Created");
 		break;
 
 	case	Device::TYPE_FTE:
 		device = new DeviceFTE;
-		INFO(NULL, "Device FTE Created");
 		break;
 
 	default:
@@ -796,11 +803,9 @@ Device*		Device::Create
 {
 	Device* device ;
 
-	INFO(NULL, "Device::Create");
 	device = Create(_properties->type);
 	if (device != NULL)
 	{
-		INFO(NULL, "Device::Create");
 		device->SetProperties(_properties);
 	}
 

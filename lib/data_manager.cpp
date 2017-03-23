@@ -2,6 +2,7 @@
 #include "data_manager.h"
 #include "KompexSQLiteException.h"
 #include "trace.h"
+#include "device_snmp.h"
 
 using namespace	Kompex;
 using namespace	std;
@@ -81,7 +82,7 @@ RetValue	DataManager::CreateDeviceTable()
 		{
 			ostringstream	query;
 
-			query << "CREATE TABLE devices (_id TEXT NOT NULL PRIMARY KEY, _type INTEGER, _enable INTEGER, _name TEXT, _options BLOB)";
+			query << "CREATE TABLE devices (_id TEXT NOT NULL PRIMARY KEY, _type INTEGER, _enable INTEGER, _name TEXT, _options TEXT)";
 			INFO(this, "Query : %s", query.str().c_str());
 
 			try 
@@ -124,15 +125,13 @@ RetValue	DataManager::AddDevice
 			}
 		}
 
-		uint8_t*	options = NULL;
-		uint32_t	options_len = _properties->GetOptionsSize();
+		char*		options = NULL;
+		uint32_t	options_len = _properties->GetOptionsSize()*2+1;
 
-		if (options_len > 0)
-		{
-			options = new uint8_t[options_len];	
+		options = new char [options_len];	
+		memset(options, 0, options_len);
 
-			_properties->GetOptions(options, options_len);
-		}
+		_properties->GetOptions(options, options_len);
 
 		try 
 		{
@@ -147,7 +146,7 @@ RetValue	DataManager::AddDevice
 			statement_->BindInt(++index, 	_properties->type);
 			statement_->BindInt(++index, 	_properties->enable);
 			statement_->BindString(++index, _properties->name);
-			statement_->BindBlob(++index, options, options_len);
+			statement_->BindString(++index, options);
 
 			statement_->ExecuteAndFree();
 
@@ -192,15 +191,12 @@ RetValue	DataManager::SetDeviceProperties
 			}
 		}
 
-		uint8_t*	options = NULL;
-		uint32_t	options_len = _properties->GetOptionsSize();
+		char*	options = NULL;
+		uint32_t	options_len = _properties->GetOptionsSize() * 2 + 1;
 
-		if (options_len > 0)
-		{
-			options = new uint8_t[options_len];	
-
-			_properties->GetOptions(options, options_len);
-		}
+		options = new char[options_len];	
+		memset(options, 0, options_len);
+		_properties->GetOptions(options, options_len);
 
 		try 
 		{
@@ -215,7 +211,7 @@ RetValue	DataManager::SetDeviceProperties
 
 			statement_->BindInt(++index, _properties->enable);
 			statement_->BindString(++index, _properties->name);
-			statement_->BindBlob(++index, options);
+			statement_->BindString(++index, options);
 			statement_->BindString(++index, _properties->id);
 
 			statement_->ExecuteAndFree();
@@ -380,13 +376,15 @@ RetValue	DataManager::GetDeviceProperties
 	
 					if (properties != NULL)
 					{
+						INFO(this, "Set Properties");
 						properties->Set(statement_);
+						INFO(this, "Set Properties");
 				
 					}
+					
 					_list.push_back(properties);
 					
 				}
-
 				statement_->FreeQuery();
 			}
 			catch(SQLiteException &exception)
@@ -591,7 +589,7 @@ RetValue	DataManager::CreateEndpointTable()
 			query << ", ";
 			query << "_value_count INTEGER";
 			query << ", ";
-			query << "_options BLOB)";
+			query << "_options TEXT)";
 			INFO(this, "Query : %s", query.str().c_str());
 
 			try 
@@ -633,15 +631,13 @@ RetValue	DataManager::AddEndpoint
 			}
 		}
 
-		uint8_t*	options = NULL;
-		uint32_t	options_len = _properties->GetOptionsSize();
+		char*	options= NULL;
+		uint32_t	options_len = _properties->GetOptionsSize() * 2 + 1;
 
-		if (options_len > 0)
-		{
-			options = new uint8_t[options_len];	
+		options = new char[options_len];	
+		memset(options, 0, options_len);
 
-			_properties->GetOptions(options, options_len);
-		}
+		_properties->GetOptions(options, options_len);
 
 		try 
 		{
@@ -660,7 +656,7 @@ RetValue	DataManager::AddEndpoint
 			statement_->BindString(++index, _properties->device_id);
 			statement_->BindInt(++index, _properties->update_interval);
 			statement_->BindInt(++index, _properties->value_count);
-			statement_->BindBlob(++index, options, options_len);
+			statement_->BindString(++index, options);
 
 			statement_->ExecuteAndFree();
 			
@@ -891,15 +887,13 @@ RetValue	DataManager::SetEndpointProperties
 			}
 		}
 
-		uint8_t*	options = NULL;
-		uint32_t	options_len = _properties->GetOptionsSize();
+		char*	options = NULL;
+		uint32_t	options_len = _properties->GetOptionsSize() * 2 + 1;
 
-		if (options_len > 0)
-		{
-			options = new uint8_t[options_len];	
+		options = new char[options_len];	
+		memset(options, 0, options_len);
 
-			_properties->GetOptions(options, options_len);
-		}
+		_properties->GetOptions(options, options_len);
 
 		try 
 		{
@@ -907,7 +901,7 @@ RetValue	DataManager::SetEndpointProperties
 			ostringstream	query;
 
 			query << "UPDATE endpoints SET _index=@index, _enable=@enable, _name=@name, _device_id=@device_id, _update_interval=@update_interval, _value_count=@value_count, _options=@options WHERE _id=@id";
-
+			INFO(this, "Query : %s", query.str().c_str());
 			statement_->Sql(query.str());
 			statement_->BindInt(++index, _properties->index);
 			statement_->BindInt(++index, _properties->enable);
@@ -915,7 +909,7 @@ RetValue	DataManager::SetEndpointProperties
 			statement_->BindString(++index, _properties->device_id);
 			statement_->BindInt(++index, _properties->update_interval);
 			statement_->BindInt(++index, _properties->value_count);
-			statement_->BindBlob(++index, options, options_len);
+			statement_->BindString(++index, options);
 			statement_->BindString(++index, _properties->id);
 
 			statement_->ExecuteAndFree();

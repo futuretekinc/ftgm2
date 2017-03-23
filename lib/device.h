@@ -50,6 +50,7 @@ public:
 
 		virtual
 		RetValue	Set(const JSONNode&	node);
+		virtual
 		RetValue	Set(Kompex::SQLiteStatement*	_statement);
 		virtual
 		RetValue	SetProperty(const std::string& _name, const std::string& _value);
@@ -62,6 +63,8 @@ public:
 		uint32		GetOptionsSize()	{	return	0;	};
 		virtual
 		uint32		GetOptions(uint8_t *options, uint32 options_len);
+		virtual
+		uint32		GetOptions(char *buffer, uint32 buffer_len);
 	};
 
 	// Constructor & Destructor

@@ -29,6 +29,7 @@ public:
 
 		uint32		GetOptionsSize();
 		uint32		GetOptions(uint8_t *options, uint32 options_len);
+		uint32		GetOptions(char *buffer, uint32 buffer_len);
 	};
 
 	// Constructor & Destructor

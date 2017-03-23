@@ -25,6 +25,7 @@ public:
 
 		uint32		GetOptionsSize();
 		uint32		GetOptions(uint8_t *options, uint32 options_len);
+		uint32		GetOptions(char *options, uint32 options_len);
 
 		Options	options;
 	};
