@@ -12,6 +12,7 @@
 #include "endpoint.h"
 #include "message_queue.h"
 #include "message_process.h"
+#include "tcp_server.h"
 
 class	JSONNode;
 class	DataManager;
@@ -66,7 +67,9 @@ public:
 
 	RetValue	Connect(DataManager* _data_manager);
 	RetValue	Disconnect(DataManager* _data_manager);
+
 	DataManager* GetDataManager();
+	TCPServer*	GetTCPServer();
 
 	RetValue	GetLoadedDeviceList(std::list<std::string>& _device_list);
 	RetValue	GetLoadedEndpointList(std::list<std::string>& _endpoint_list);
@@ -103,6 +106,7 @@ protected:
 	std::map<const std::string, Device *>		device_map_;
 	std::map<const std::string, Endpoint *>		endpoint_map_;
 	DataManager*								data_manager_;
+	TCPServer*									tcp_server_;
 };
 
 #endif

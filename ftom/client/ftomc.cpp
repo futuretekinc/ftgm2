@@ -5,14 +5,12 @@
 #include <mutex>
 #include <unistd.h>
 #include "trace.h"
-#include "object_manager.h"
 #include "snmp_object.h"
 #include "snmp_client.h"
 #include "device.h"
 #include "device_fte.h"
 #include "endpoint.h"
 #include "shell.h"
-#include "data_manager.h"
 
 using namespace std;
 
@@ -56,29 +54,12 @@ int main
 		}   
 	}   
 
-	ObjectManager*	om = new ObjectManager;
-	DataManager*	dm = new DataManager;
-
-	TRACE_SET_LEVEL(om, Trace::Level::INFO);
-	TRACE_SET_LEVEL(dm, Trace::Level::INFO);
-	TRACE_SET_LEVEL("global", Trace::Level::INFO);
-
-	om->Load(config_file_name);
-	om->Connect(dm);
-	
-	om->Start();
 	if (start_shell)
 	{
-		Shell	shell(object_manager_shell_commands, object_manager_shell_command_count, om);
+		Shell	shell(object_manager_shell_commands, object_manager_shell_command_count, NULL);
 
 		shell.Start(true);
 	}
-
-	om->Stop();
-	om->Disconnect(dm);
-
-	delete dm;
-	delete om;
 
 	return	0;	
 }

@@ -11,219 +11,50 @@
 #include "string_utils.h"
 #include <iostream>
 
-template <typename T>	class	ShellCommand;
-
-template <typename T>
 class	Shell
 {
 public:
-	Shell(ShellCommand<T>* _commands[], int 	_command_count, T* _data)
+	struct Command
 	{
-		out_	= &std::cout;
-		data_ 	= _data;
-		thread_ = NULL;
-		stop_ 	= true;
-		sync_   = false;
-		prompt_	= "shell";
-		max_command_width_ = 8;
+		std::string	name;
+		std::string	short_help;
+		std::string	help;	
 
-		for(int i = 0 ; i < _command_count ; i++)
-		{
-			typename std::map<const std::string, ShellCommand<T> *>::iterator it = command_map_.find(_commands[i]->name);
-			if (it == command_map_.end())
-			{
-				INFO(NULL, "Add command[%s].", _commands[i]->name.c_str());
-				command_map_[_commands[i]->name] = _commands[i];	
+		RetValue	(*function)(std::string _arguments[], uint32_t _count, Shell* _shell);
 
-			}
-			else
-			{
-				INFO(NULL, "Already exist command[%s].", _commands[i]->name.c_str());
-			}
-		}
-	}
+		Command(const Command& _command);
+		Command(const std::string&  _name, const std::string&  _help, const std::string& _short_help, RetValue	(*_function)(std::string [], uint32_t, Shell*));
+	};
 
-	~Shell()
-	{
-		typename std::map<const std::string, ShellCommand<T> *>::iterator	it = command_map_.begin();
-		for(;it != command_map_.end() ; it++)
-		{
-		}
-	}
+	Shell(Command* _commands[], int 	_command_count, void* _data);
+	~Shell();
 
-	std::ostream&	Out()	{	return	*out_; }
+	std::ostream&	Out();
+	void*			Data();
 
-	T*	Data()	{	return	data_;	}
-
-	RetValue	Start(bool _sync = false)
-	{
-		if (thread_ != NULL)
-		{
-			return	RET_VALUE_OK;	
-		}
-
-		thread_ = new std::thread(Process, this);
-
-		while(stop_)
-		{
-			usleep(1000);		
-		}
-
-		sync_ = _sync;
-		if (sync_)
-		{
-			thread_->join();	
-
-			thread_ = NULL;
-		}
-
-		return	RET_VALUE_OK;
-	}
-
-	RetValue	Stop()
-	{
-		stop_ = true;
-
-		return	RET_VALUE_OK;
-	}
-
-
-	void	Add(ShellCommand<T>* _commands[], int 	_command_count)
-	{
-		thread_ = NULL;
-		stop_ 	= true;
-
-		for(int i = 0 ; i < _command_count ; i++)
-		{
-			typename std::map<const std::string, ShellCommand<T> *>::iterator it = command_map_.find(_commands[i].command);
-			if (it == command_map_.end())
-			{
-				INFO(NULL, "Add command[%s].", _commands[i]->command.c_str());
-				command_map_[_commands[i].command] = _commands[i];	
-			}
-			else
-			{
-				INFO(NULL, "Already exist command[%s].", _commands[i]->command.c_str());
-			}
-		}
-	}
-
-	uint32	GetCommandCount()
-	{
-		return	command_map_.size();	
-	}
-
-	ShellCommand<T>*	GetCommandAt(uint32 index)
-	{
-		typename std::map<const std::string, ShellCommand<T>*>::iterator it = command_map_.begin();
-
-		while (it != command_map_.end()) 
-		{
-			if (index == 0)
-			{
-				return	it->second;
-			}
-
-			index--;
-			it++;
-		}
-
-		return	NULL;
-	}
-
-	ShellCommand<T>*	GetCommand(const std::string& name_)
-	{
-		typename std::map<const std::string, ShellCommand<T>*>::iterator it = command_map_.find(name_);
-		if (it != command_map_.end()) 
-		{
-			return	it->second;
-		}
-
-		return	NULL;
-	}
-
-	uint32	GetCommandWidth()	{	return	max_command_width_;	}
+	RetValue		Start(bool _sync = false);
+	RetValue		Stop();
+	void			Add(Command* _commands[], int 	_count);
+	uint32			GetCommandCount();
+	Command*		GetCommandAt(uint32 index);
+	Command*		GetCommand(const std::string& _name);
+	uint32			GetCommandWidth();
 
 protected:
-	T*				data_;
+	static 
+	int				Parser(const std::string& _command_line, std::string* _arguments, int _max_count);
+	static
+	void 			Process(Shell *_shell);
+
+	void*			data_;
 	std::thread*	thread_;
 	bool			stop_;
 	bool			sync_;
 	std::string		prompt_;
-	std::map<const std::string, ShellCommand<T>*>	command_map_;
+	std::map<const std::string, Command*>	command_map_;
 	std::ostream	*out_;
 	uint32			max_command_width_;
 
-	static
-	int		Parser
-	(
-		const std::string& _command_line, 
-		std::string* _arguments, 
-		int _max_count
-	)
-	{
-		int	count = 0;
-		
-		if (_command_line.length() != 0)
-		{
-			char *word = NULL;
-			const char *seperators = "\t \n\r";
-			char *buffer = new char[_command_line.length() + 1];
-
-			strcpy(buffer, _command_line.c_str());
-				
-			word = strtok(buffer, seperators);
-			while((word != NULL) && (count < _max_count))
-			{
-				_arguments[count++] = word;
-				word = strtok(NULL, seperators);
-			}
-
-			delete [] buffer;
-		}
-
-		return	count;
-	}
-
-	static
-	void 	Process(Shell *_shell)
-	{
-		std::string	command_line;
-		std::string	arguments[16];
-		int		count;
-
-		_shell->stop_	= false;
-
-		while(!_shell->stop_)
-		{
-			std::cout << _shell->prompt_ << "> ";
-			std::getline(std::cin, command_line);
-			count = 0;
-
-			count = Shell<T>::Parser(command_line, arguments, 16);
-			if (count != 0)
-			{
-				typename std::map<const std::string, ShellCommand<T>*>::iterator it = _shell->command_map_.find(arguments[0])	;
-				if (it != _shell->command_map_.end())
-				{
-					RetValue	ret_value;
-
-					ret_value = it->second->function(arguments, count, _shell);
-					if (ret_value == RET_VALUE_INVALID_ARGUMENTS)
-					{
-						std::cout << it->second->help << std::endl;
-					}
-				}
-				else
-				{
-					std::cout << "Command not found : " << arguments[0] << std::endl;	
-				}
-			}
-		}
-
-		std::cout << "finished." << std::endl;
-	}
-	
 };
 
 inline bool	IsCorrectOption(const std::string& _argument, const char *_option)

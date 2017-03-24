@@ -1,15 +1,16 @@
 # Makefile template
-PROJ_ROOT = ..
+PROJ_ROOT = ../..
 
 include $(PROJ_ROOT)/IncludePre.mk
 
-LIBS_CYCLING_DEPEND = 1
-SUB_DIRS = command client
+SUB_DIRS = lib
 
-TARGET_NAME = ftom
+LIBS_CYCLING_DEPEND = 1
+
+TARGET_NAME = ftomc
 TARGET_SRCS = $(wildcard *.cpp)
 
-DEPEND_LIBS = -lftom_command -lftgm
+DEPEND_LIBS = -lftomc -lftgm
 
 LIBS += -ljson -lnetsnmp  /home/xtra/KompexSQLiteWrapper-Source_1.11.13/lib/debug/KompexSQLiteWrapper_Static_d.a -lpthread -ldl
 

@@ -1,5 +1,5 @@
 PROJ_ROOT=$(shell pwd)
-SUBDIR=lib command ftom
+SUBDIR=lib ftom
 
 export TOPDIR
 

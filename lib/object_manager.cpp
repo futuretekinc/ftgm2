@@ -17,10 +17,15 @@ using namespace	std;
 ObjectManager::ObjectManager()
 :	MessageProcess()
 {
+	tcp_server_ = new TCPServer(this);
 }
 
 ObjectManager::~ObjectManager()
 {
+	if (tcp_server_ != NULL)
+	{
+		delete tcp_server_;
+	}
 }
 
 void	ObjectManager::PreProcess()
@@ -33,11 +38,21 @@ void	ObjectManager::PreProcess()
 		LoadFromDataManager();
 	}
 
+	if (tcp_server_ != NULL)
+	{
+		tcp_server_->Start();	
+	}
+
 	INFO(this, "Pre-process done.");
 }
 
 void	ObjectManager::PostProcess()
 {
+	if (tcp_server_ != NULL)
+	{
+		tcp_server_->Stop();	
+	}
+
 	if (data_manager_ != NULL)
 	{
 		data_manager_->Stop();	
@@ -1099,17 +1114,24 @@ DataManager* ObjectManager::GetDataManager()
 	return	data_manager_;
 }
 
+TCPServer*	ObjectManager::GetTCPServer()
+{
+	return	tcp_server_;
+}
+
 void	ObjectManager::OnMessage
 (
-	Message* _message
+	Message* _base_message
 )
 {
-	INFO(this, "Message[%s] recieved.", ToString(_message).c_str());
-	switch(_message->type)
+	INFO(this, "Message[%s] recieved.", ToString(_base_message).c_str());
+	switch(_base_message->type)
 	{
 	case	Message::TYPE_STARTED:
 		{
-			if (_message->id == string(""))
+			MessageStart* message = (MessageStart *)_base_message;
+
+			if (message->id == string(""))
 			{
 				auto it = device_map_.begin();
 				for(; it != device_map_.end(); it++)
@@ -1127,7 +1149,7 @@ void	ObjectManager::OnMessage
 			}
 			else
 			{
-				auto it = device_map_.find(((MessageStart *)_message)->id);
+				auto it = device_map_.find(message->id);
 				if (it != device_map_.end())
 				{
 					it->second->Start();
@@ -1136,7 +1158,7 @@ void	ObjectManager::OnMessage
 					auto endpoint_it = endpoint_map_.begin();
 					for(; endpoint_it != endpoint_map_.end(); endpoint_it++)
 					{
-						if (endpoint_it->second->GetDeviceID() == ((MessageStart *)_message)->id)
+						if (endpoint_it->second->GetDeviceID() == message->id)
 						{
 							endpoint_it->second->Start();
 						}
@@ -1148,7 +1170,9 @@ void	ObjectManager::OnMessage
 
 	case	Message::TYPE_STOP:
 		{
-			if (_message->id == string(""))
+			MessageStop* message = (MessageStop *)_base_message;
+
+			if (message->id == string(""))
 			{
 				auto it = device_map_.begin();
 				for(; it != device_map_.end(); it++)
@@ -1164,7 +1188,7 @@ void	ObjectManager::OnMessage
 			}
 			else
 			{
-				auto it = device_map_.find(((MessageStart *)_message)->id);
+				auto it = device_map_.find(message->id);
 				if (it != device_map_.end())
 				{
 					INFO(this, "Device[%s] stopped.", it->second->GetID().c_str());
@@ -1173,7 +1197,7 @@ void	ObjectManager::OnMessage
 					auto endpoint_it = endpoint_map_.begin();
 					for(; endpoint_it != endpoint_map_.end(); endpoint_it++)
 					{
-						if (endpoint_it->second->GetDeviceID() == ((MessageStart *)_message)->id)
+						if (endpoint_it->second->GetDeviceID() == message->id)
 						{
 							endpoint_it->second->Stop();
 						}
@@ -1185,7 +1209,7 @@ void	ObjectManager::OnMessage
 
 	default:
 		{
-			MessageProcess::OnMessage(_message);
+			MessageProcess::OnMessage(_base_message);
 		}
 	}
 }

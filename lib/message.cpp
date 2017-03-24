@@ -10,34 +10,18 @@ struct	MessageTypeString
 }
 message_type_string[] =
 {
-	{ Message::TYPE_START,	"start"	},
-	{ Message::TYPE_STARTED,"started"	},
-	{ Message::TYPE_STOP,	"stop"	},
-	{ Message::TYPE_STOPPED,"stopped"	},
+	{ Message::TYPE_START,		"start"	},
+	{ Message::TYPE_STARTED,	"started"	},
+	{ Message::TYPE_STOP,		"stop"	},
+	{ Message::TYPE_STOPPED,	"stopped"	},
 	{ Message::TYPE_ACTIVATED,	"activated" },
-	{ Message::TYPE_DEACTIVATED,	"deactivated" },
+	{ Message::TYPE_DEACTIVATED,"deactivated" },
 	{ Message::TYPE_TEST,		"test"	},
-	{ Message::TYPE_QUIT,	"quit"	}
+	{ Message::TYPE_QUIT,		"quit"	},
+	{ Message::TYPE_SESSION_DISCONNECTED, "Session disconnected" },
+	{ Message::TYPE_PACKET_RECEIVED,	"Packet received" },
+	{ Message::TYPE_UNKNOWN,	"Unknown" }
 };
-
-const 
-string&	ToString
-(
-	Message& _message
-)
-{
-	static	string	unknown("unknown");
-
-	for(int i = 0 ; sizeof(message_type_string) / sizeof(MessageTypeString) ; i++)
-	{
-	 	if (_message.type == message_type_string[i].type)
-		{
-			return	message_type_string[i].name;
-		}
-	}
-
-	return	unknown;
-}
 
 const 
 string&	ToString

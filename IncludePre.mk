@@ -1,39 +1,26 @@
-MODEL=i686
+# IncludePre.mk
 
-TARGET=$(TOPDIR)/target/$(MODEL)
-EXEC_PREFIX=$(TARGET)/usr/bin
-INC_PREFIX=$(TARGET)/usr/include
-LIB_PREFIX=$(TARGET)/usr/lib
-CONF_PREFIX=$(TARGET)/etc
-CGI_PREFIX=$(TARGET)/www/cgi-bin
-export MODEL TOPDIR
+CC = g++
+AR = ar
+RANLIB = ranlib
+RM = rm
+MKDIR = mkdir
+MAKE = make
 
-CFLAGS:= -fPIC -c -g -Wall \
-				-std=gnu++11\
-				-I. \
-				-I/usr/include/azureiot\
-				-I/usr/include/azureiot/inc\
-				-I$(TOPDIR)/lib\
-				-I/home/xtra/KompexSQLiteWrapper-Source_1.11.13/inc
+ROOT_SRC_DIR = $(PROJ_ROOT)/src
+ROOT_OUT_DIR = $(PROJ_ROOT)/out
+ROOT_LIB_DIR = $(ROOT_OUT_DIR)/lib
 
-LDFLAGS:= -Wl,--no-as-needed\
-				-L.\
-				-L$(TOPDIR)/lib
+INC_DIRS = -I$(PROJ_ROOT)/Include -I$(PROJ_ROOT)/lib -I/home/xtra/KompexSQLiteWrapper-Source_1.11.13/inc
 
-CC=g++
-#CC=armv5-linux-g++
-#CC=arm-openwrt-linux-uclibcgnueabi-gcc
-CFLAGS:= -fPIC \
-	$(CFLAGS) \
-		-I/usr/local/include \
-		-I/usr/local/include/cjson 
+ifeq ($(RELEASE), 1)
+OBJS_DIR = Release
+DBG_FLAGS = -O2 -DNDEBUG -std=gnu++11
+else
+OBJS_DIR = Debug
+DBG_FLAGS = -g -O0 -DDEBUG -std=gnu++11
+endif
 
-LDFLAGS:= $(LDFLAGS)\
-		-L/usr/local/lib \
-		-I/home/xtra/KompexSQLiteWrapper-Source_1.11.13/lib/debug
+DEPEND_FILE = $(OBJS_DIR)/depend_file
 
-
-BIN_CFLAGS=$(CFLAGS)
-BIN_LDFLAGS=$(LDFLAGS)
-LIB_CFLAGS=$(CFLAGS)
-LIB_LDFLAGS=$(LDFLAGS)
+LIB_DIRS = -L$(ROOT_LIB_DIR)/$(OBJS_DIR)

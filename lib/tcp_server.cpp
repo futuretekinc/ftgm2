@@ -13,6 +13,39 @@
 #include "message.h"
 
 
+TCPServer::MessagePacketReceived::MessagePacketReceived
+(
+	uint16_t _port, 
+	void* _data, 
+	uint32_t _length
+)
+: Message(TYPE_PACKET_RECEIVED), port(_port), data(NULL), length(0)
+{
+	try
+	{
+		if (_length != 0)
+		{
+			data = new uint8_t[_length];
+
+			memcpy(data, _data, _length);
+		}
+
+		length = _length;
+	}
+	catch(std::bad_alloc &e)
+	{
+		ERROR(NULL, RET_VALUE_NOT_ENOUGH_MEMORY, "Failed to create message!");	
+	}
+}
+
+TCPServer::MessagePacketReceived::~MessagePacketReceived()
+{
+	if (data != NULL)
+	{
+		delete data;	
+	}
+}
+
 TCPServer::Properties::Properties()
 : port(8888), max_session_count(10), timeout(60000)
 {
@@ -71,18 +104,20 @@ RetValue	TCPServer::Properties::Set
 ///////////////////////////////////////////////////////
 TCPServer::TCPServer
 (
-	uint16_t	_port
+	void*	_data
 )
 {
-	properties_.port = _port;
+	data_ = _data;	
 }
 
 TCPServer::~TCPServer()
 {
+	session_map_locker_.Lock();
 	for(auto it = session_map_.begin(); it != session_map_.end(); it++)
 	{
 		delete it->second;
 	}
+	session_map_locker_.Unlock();
 }
 
 RetValue	TCPServer::Set
@@ -97,35 +132,9 @@ RetValue	TCPServer::Set
 	return	RET_VALUE_OK;
 }
 
-void	TCPServer::OnMessage
-(
-	Message *_base_message
-)
+void*	TCPServer::GetData()
 {
-	switch(_base_message->type)
-	{
-	case	Message::TYPE_SESSION_DISCONNECTED:
-		{
-			MessageSessionDisconnected* message = dynamic_cast<TCPServer::MessageSessionDisconnected*>(_base_message);
-
-			if (message != NULL)
-			{
-				TCPSession *session = session_map_[message->port];		
-				session_map_.erase(message->port);
-				
-				session->Stop();
-
-				delete session;
-
-			}
-		}
-		break;
-
-	default:
-		{
-			MessageProcess::OnMessage(_message);	
-		}
-	}
+	return	data_;
 }
 
 void	TCPServer::PreProcess()
@@ -179,8 +188,6 @@ void	TCPServer::Process()
 		client_socket = accept(socket_, (struct sockaddr *)&client, (socklen_t *)&client_len);
 		if (client_socket > 0)
 		{
-			INFO(this, "Accept new connection[ %s:%d ]", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
-
 			TCPSession*	session = new TCPSession(this, client_socket, &client, properties_.timeout);
 			if (session == NULL)
 			{
@@ -197,7 +204,14 @@ void	TCPServer::Process()
 				}
 				else
 				{
-					session_map_[client.sin_port] = session;
+					session_map_locker_.Lock();
+
+					session_map_[ntohs(client.sin_port)] = session;
+
+					session_map_locker_.Unlock();
+
+					INFO(this, "New session created[%s:%d]", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+
 				}
 			}
 		}
@@ -206,10 +220,14 @@ void	TCPServer::Process()
 
 void	TCPServer::PostProcess()
 {
+	session_map_locker_.Lock();
+
 	for(auto it = session_map_.begin(); it != session_map_.end() ; it++)
 	{
 		delete it->second;
 	}
+
+	session_map_locker_.Unlock();
 }
 
 
@@ -231,4 +249,119 @@ RetValue	TCPServer::SessionDisconnected
 	}
 
 	return	ret_value;
+}
+
+RetValue	TCPServer::PacketReceived
+(
+	uint16_t _port, 
+	void* 	_data, 
+	uint32_t _length
+)
+{
+	RetValue	ret_value = RET_VALUE_OK;
+
+	try
+	{
+		Message	*message = new MessagePacketReceived(_port, _data, _length);
+		Post(message);
+	}
+	catch(std::bad_alloc &e)
+	{
+		ret_value = RET_VALUE_NOT_ENOUGH_MEMORY;	
+	}
+
+	return	ret_value;
+}
+
+uint32_t	TCPServer::GetSessionCount()
+{
+	return	session_map_.size();
+}
+
+RetValue	TCPServer::GetSessionInformationList
+(
+	std::list<TCPSession::Information>& _information_list
+)
+{
+	session_map_locker_.Lock();
+
+	for(auto it = session_map_.begin() ; it != session_map_.end() ; it++)
+	{
+		_information_list.push_back(it->second->GetInformation());
+	}
+
+	session_map_locker_.Unlock();
+
+	return	RET_VALUE_OK;
+}
+
+void	TCPServer::OnMessage
+(
+	Message *_base_message
+)
+{
+	switch(_base_message->type)
+	{
+	case	Message::TYPE_SESSION_DISCONNECTED:
+		{
+			MessageSessionDisconnected* message = (MessageSessionDisconnected*)_base_message;
+
+			if (message != NULL)
+			{
+				session_map_locker_.Lock();
+
+				TCPSession *session = session_map_[message->port];		
+				session_map_.erase(message->port);
+
+				session_map_locker_.Unlock();
+				
+				session->Stop();
+
+				delete session;
+
+			}
+		}
+		break;
+
+	case	Message::TYPE_PACKET_RECEIVED:
+		{
+			OnPacketReceived((MessagePacketReceived *)_base_message);
+		}
+		break;
+
+
+	default:
+		{
+			MessageProcess::OnMessage(_base_message);	
+		}
+	}
+}
+
+void	TCPServer::OnPacketReceived
+(
+	MessagePacketReceived* message
+)
+{
+	ASSERT(message != NULL);
+	RetValue	ret_value = RET_VALUE_OK;
+	TCPSession *session;
+	auto it = session_map_.find(message->port);
+
+	if (it != session_map_.end())
+	{
+		session = it->second;
+
+		ret_value = session->Send(message->data, message->length);
+		if (ret_value != RET_VALUE_OK)
+		{
+			ERROR(this, ret_value, "Failed to send data from session[%d]", message->port);	
+		}
+	}
+	else
+	{
+		ret_value = RET_VALUE_SESSION_NOT_FOUND;
+		INFO(this, "session_map_.size() = %d", session_map_.size());
+		ERROR(this, ret_value , "Failed to get session[%d]", message->port);
+		return;	
+	}
 }

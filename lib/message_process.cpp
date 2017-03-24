@@ -11,7 +11,7 @@ MessageProcess::MessageProcess()
 {
 	thread_ = NULL;
 	stop_	= true;
-	loop_interval_ = 1000;
+	loop_interval_ = 10;
 }
 
 RetValue	MessageProcess::Start(uint32_t _timeout, bool _sync)
@@ -88,7 +88,6 @@ void	MessageProcess::OnMessage
 	Message* _message
 )
 {
-	INFO(this, "Message[%s] received.", ToString(_message).c_str());
 	switch(_message->type)
 	{
 	case	Message::TYPE_QUIT:
@@ -145,6 +144,7 @@ void MessageProcess::Thread
 
 			if (message != NULL)
 			{
+				INFO(_mp, "Message : %s", ToString(message).c_str());
 				_mp->OnMessage(message);
 
 				delete message;

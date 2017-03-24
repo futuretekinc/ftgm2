@@ -1,52 +1,90 @@
-all: subdirs $(LIB_TARGET) $(BIN_TARGET)
+# IncludePost.mk
 
-$(BIN_TARGET): $(BIN_OBJS)
-	$(CC) -o $@ $^ $(BIN_LDFLAGS)
+LIB_FULL_NAME = $(ROOT_LIB_DIR)/$(OBJS_DIR)/lib$(LIB_NAME).a
+LIB_OBJS = $(LIB_SRCS:%.cpp=$(OBJS_DIR)/%.o)
 
-$(LIB_TARGET) : $(LIB_OBJS)
-	$(AR) rcs $@ $^
+#ALL_LIBS = -l$(LIB_NAME) $(DEPEND_LIBS) $(LIBS)
+ALL_LIBS = $(DEPEND_LIBS) $(LIBS)
 
-$(BIN_OBJS) : %.o : %.cpp
-	$(CC) $(BIN_CFLAGS) -o $@ -c $<
+TARGET_OBJS = $(TARGET_SRCS:%.cpp=$(OBJS_DIR)/%.o)
+TARGET_NAMES = $(TARGET_SRCS:%.cpp=$(OBJS_DIR)/%)
 
-$(LIB_OBJS) : %.o : %.cpp
-	$(CC) $(LIB_CFLAGS) -o $@ -c $<
+.SUFFIXES : .cpp .o
 
-%.d : %.c 
-	@$(CC) -MM $(CFLAGS) $< > $@
+all : lib subdirs targets
 
--include $(patsubst %.cpp,%.d,$(wildcard *.cpp))
+subdirs : 
+	@for dir in $(SUB_DIRS); do \
+		$(MAKE) -C $$dir all; \
+		if [ $$? != 0 ]; then exit 1; fi; \
+		done
 
-subdirs:
-	@for dir in $(SUBDIR); do\
-		make -C $$dir TOPDIR=$(TOPDIR);\
-	done
+lib : $(LIB_FULL_NAME)
 
-install: $(BIN_TARGET)
-ifneq ($(BIN_TARGET),)
-	@install -d $(EXEC_PREFIX)
-	@install -t $(EXEC_PREFIX) $(BIN_TARGET)
+liball : $(LIB_FULL_NAME) 
+	@for dir in $(SUB_DIRS); do \
+		$(MAKE) -C $$dir liball; \
+		if [ $$? != 0 ]; then exit 1; fi; \
+		done
+
+targets : $(TARGET_NAMES)
+
+$(LIB_FULL_NAME) : $(LIB_OBJS)
+	@`[ -d $(ROOT_LIB_DIR)/$(OBJS_DIR) ] || $(MKDIR) -p $(ROOT_LIB_DIR)/$(OBJS_DIR)`
+	$(AR) rcv $@ $(LIB_OBJS)
+	$(RANLIB) $@
+
+$(OBJS_DIR)/%.o : %.cpp
+	@echo "==================================================="
+	@echo "= Compiling $@ "
+	@echo "==================================================="
+	@`[ -d $(OBJS_DIR) ] || $(MKDIR) $(OBJS_DIR)`
+	$(CC) $(CFLAGS) $(DBG_FLAGS) $(INC_DIRS) -c $< -o $@
+
+.SECONDEXPANSION:
+$(TARGET_NAMES): $$@.o
+	@echo "==================================================="
+	@echo "= Linking $@ "
+	@echo "==================================================="
+ifeq ($(LIBS_CYCLING_DEPEND),1)
+	$(CC) -o $@ $< $(LIB_DIRS) -Wl,-\( $(ALL_LIBS) -Wl,-\)
+else
+	$(CC) -o $@ $< $(LIB_DIRS) $(ALL_LIBS)
 endif
-	@for dir in $(SUBDIR); do\
-		make -C $$dir install TOPDIR=$(TOPDIR);\
+
+depend :
+	@`[ -d $(OBJS_DIR) ] || $(MKDIR) $(OBJS_DIR)`
+	@$(RM) -f $(DEPEND_FILE)
+	@for FILE in $(LIB_SRCS:%.c=%) $(TARGET_SRCS:%.c=%); do \
+		$(CC) -MM -MT $(OBJS_DIR)/$$FILE.o $$FILE.c $(CFLAGS) $(DBG_FLAGS) $(INC_DIRS) >> $(DEPEND_FILE); \
 	done
 
+dependall : depend
+	@for dir in $(SUB_DIRS); do \
+		$(MAKE) -C $$dir dependall; \
+		if [ $$? != 0 ]; then exit 1; fi; \
+	done
 
-dev_install: 
-ifneq ($(LIB_TARGET),)
-	@install -d $(INC_PREFIX)
-	@install -t $(INC_PREFIX) *.h
-	@install -d $(LIB_PREFIX)
-	@install -t $(LIB_PREFIX) $(LIB_TARGET)
+clean :
+	$(RM) -fr $(OBJS_DIR) $(LIB_FULL_NAME)
+
+cleanall : clean
+	@for dir in $(SUB_DIRS); do \
+		$(MAKE) -C $$dir cleanall; \
+		if [ $$? != 0 ]; then exit 1; fi; \
+	done
+
+$(TARGET_NAMES) : $(LIB_FULL_NAME) \
+	$(DEPEND_LIBS:-l%=$(ROOT_LIB_DIR)/$(OBJS_DIR)/lib%.a)
+
+ifneq ($(MAKECMDGOALS), clean)
+ifneq ($(MAKECMDGOALS), cleanall)
+ifneq ($(MAKECMDGOALS), depend)
+ifneq ($(MAKECMDGOALS), dependall)
+ifneq ($(strip $(LIB_SRCS) $(TARGET_SRCS)),)
+-include $(DEPEND_FILE)
 endif
-	@for dir in $(SUBDIR); do\
-		make -C $$dir dev_install TOPDIR=$(TOPDIR);\
-	done
-
-
-clean:
-	@rm -f *.so *.a $(LIB_OBJS) $(BIN_OBJS) *.d
-	@for dir in $(SUBDIR); do\
-		make -C $$dir clean;\
-	done
-	
+endif
+endif
+endif
+endif

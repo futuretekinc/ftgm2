@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <map>
 #include "shell.h"
-#include "shell_command.h"
 #include "object_manager.h"
 #include "data_manager.h"
 #include "tcp_server.h"
@@ -14,11 +13,11 @@ RetValue	ShellCommandServer
 (
 	std::string* _arguments, 
 	uint32_t	_count,
-	Shell<ObjectManager>* _shell
+	Shell* _shell
 )
 {
 	RetValue	ret_value = RET_VALUE_OK;
-	ObjectManager*	object_manager = _shell->Data();
+	ObjectManager*	object_manager = (ObjectManager*)_shell->Data();
 	TCPServer*		tcp_server = object_manager->GetTCPServer();
 
 	if (_count ==1)
@@ -54,7 +53,7 @@ finished:
 	return	ret_value;
 }
 
-ShellCommand<ObjectManager>	object_manager_command_server=
+Shell::Command	object_manager_command_server=
 {
 	.command	= "server",
 	.help		= "server",

@@ -81,11 +81,11 @@ RetValue	TCPClient::Connect()
 	}
 
 #if 0
- 	if( fcntl(socket_, F_SETFL, O_NONBLOCK) == -1 )
+ 	if( fcntl(client_socket, F_SETFL, O_NONBLOCK) == -1 )
 	{
 		ret_value = RET_VALUE_ERROR;
        	ERROR(this, ret_value, "Failed to set nonblocking socket.\n");
-       	return;
+       	return ret_value;
 	}
 #endif			 
 
@@ -177,27 +177,39 @@ void	TCPClient::Process()
 {
 	RetValue	ret_value;
 
-	uint8_t		buffer[4096];
-	uint32_t	receive_len;
+	uint8_t	buffer[4096];
+	int32_t	receive_len;
 
 	if (socket_ > 0)
 	{
 		receive_len = recv(socket_, buffer, sizeof(buffer), MSG_DONTWAIT);
 		if (receive_len < 0)
 		{
-			stop_ = true;
-			ERROR(this, RET_VALUE_SOCKET_ERROR, "The socket has terminated abnormally.");
+			if (errno != EAGAIN)
+			{
+				stop_ = true;
+
+				ERROR(this, RET_VALUE_SOCKET_ERROR, "The socket has terminated abnormally.");
+			}
 		}
 		else if (receive_len > 0)
 		{
-			INFO(this, "Packet received!");
+			INFO(this, "Packet[len = %d] received!", receive_len);
 			locker_.Lock();
 			
 			if (receive_packet_list_.size() < 10)
 			{
-				Frame	*frame = new Frame(buffer, receive_len);
+				try
+				{
+					Frame	*frame = new Frame(buffer, receive_len);
 
-				receive_packet_list_.push_back(frame);
+					receive_packet_list_.push_back(frame);
+				}
+				catch(std::bad_alloc &e)
+				{
+					ERROR(this, RET_VALUE_NOT_ENOUGH_MEMORY, "Failed to create frame[receive_len = %d]", receive_len);	
+				
+				}
 			}
 			else
 			{

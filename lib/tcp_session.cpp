@@ -26,8 +26,9 @@ TCPSession::TCPSession
 
 	server_	= _server;
 	socket_ = _socket;
-	addr_info_ = *_addr_info;
-	timeout_ = _timeout;
+	information_.addr_info = *_addr_info;
+	information_.timeout = _timeout;
+	information_.start_time.GetCurrentTime();
 
 	receive_buffer_len_ = 4096;
 	receive_buffer_ = new uint8_t[receive_buffer_len_];
@@ -50,7 +51,7 @@ RetValue	TCPSession::Disconnect()
 		socket_ = 0;
 		if (server_ != NULL)
 		{
-			server_->SessionDisconnected(addr_info_.sin_port);
+			server_->SessionDisconnected(information_.addr_info.sin_port);
 		}
 	}
 
@@ -61,11 +62,23 @@ void	TCPSession::Process()
 {
 	if (socket_)
 	{
-		receive_len_ = recv(socket_, receive_buffer_, receive_buffer_len_, 0);
+		receive_len_ = recv(socket_, receive_buffer_, receive_buffer_len_, MSG_DONTWAIT);
 		if (receive_len_ < 0)
 		{
+			if (errno != EAGAIN)
+			{
+				Disconnect();
+				ERROR(this, RET_VALUE_SOCKET_ERROR, "The socket has terminated abnormally.");
+			}
+		}
+		else if (receive_len_ == 0)
+		{
 			Disconnect();
-			ERROR(this, RET_VALUE_SOCKET_ERROR, "The socket has terminated abnormally.");
+			ERROR(this, RET_VALUE_SOCKET_ERROR, "The socket has terminated.");
+		}
+		else
+		{
+			server_->PacketReceived(ntohs(information_.addr_info.sin_port), receive_buffer_, receive_len_);
 		}
 	}
 }
@@ -94,4 +107,10 @@ RetValue	TCPSession::Send
 	}
 
 	return	ret_value;
+}
+
+const
+TCPSession::Information&	TCPSession::GetInformation()
+{
+	return	information_;
 }
