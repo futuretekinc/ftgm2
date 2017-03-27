@@ -1428,7 +1428,7 @@ void	ObjectManager::ShowEndpointList()
 
 		cout << " " << setw(device_id_width) << endpoint->GetDeviceID();
 
-		TimedValue value = endpoint->GetValue();
+		Value value = endpoint->GetValue();
 		buffer << value.ToString() << "[" << value.GetTime().ToString() << "]";
 		cout << " " << setw(value_count_width) << buffer.str();
 		

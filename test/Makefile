@@ -1,14 +1,15 @@
-ifeq ($(TOPDIR),)
-TOPDIR=$(PWD)/..
-endif
+# Makefile template
+PROJ_ROOT = ..
 
-include $(TOPDIR)/IncludePre.mk
+include $(PROJ_ROOT)/IncludePre.mk
 
-#CFLAGS=$(CFLAGS)\
-		-D__malloc_and_calloc_defined=1 \
-		-D__need_malloc_and_calloc=1
+LIBS_CYCLING_DEPEND = 1
 
-BIN_TARGET=test
-BIN_OBJS=$(patsubst %.cpp,%.o,$(wildcard *.cpp) $(wildcard command/*.cpp))
-BIN_LDFLAGS=$(LDFLAGS) -pthread -lftm -ljson -lnetsnmp  /home/xtra/KompexSQLiteWrapper-Source_1.11.13/lib/debug/KompexSQLiteWrapper_Static_d.a -ldl
-include $(TOPDIR)/IncludePost.mk
+TARGET_NAME = test
+TARGET_SRCS = $(wildcard *.cpp)
+
+DEPEND_LIBS = 
+
+LIBS += -lftgm -ljson -lnetsnmp  /home/xtra/KompexSQLiteWrapper-Source_1.11.13/lib/debug/KompexSQLiteWrapper_Static_d.a -lpthread -ldl
+
+include $(PROJ_ROOT)/IncludePost.mk

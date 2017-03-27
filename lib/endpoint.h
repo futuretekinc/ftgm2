@@ -137,12 +137,12 @@ public:
 	RetValue		Synchronize();
 
 	uint32			ValueCount();
-	RetValue		AddValue(const TimedValue& _value);
+	RetValue		AddValue(const Value& _value);
 	RetValue		DeleteValue(uint32 _count);
 
-	TimedValue		GetValue();
-	TimedValue		GetValue(uint32 _index);
-	uint32			GetValueList(TimedValue* _value_list, uint32 _count);
+	Value			GetValue();
+	Value			GetValue(uint32 _index);
+	uint32			GetValueList(std::list<Value>& _value_list, uint32 _count);
 
 	virtual	
 	RetValue		Set(const JSONNode&	_endpoint);
@@ -167,7 +167,7 @@ protected:
 	Properties*		properties_;
 	bool			activation_;
 	ObjectManager*	object_manager_;
-	std::list<TimedValue>	value_list_;
+	std::list<Value>	value_list_;
 };
 
 

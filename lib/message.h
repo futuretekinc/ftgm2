@@ -31,6 +31,11 @@ struct	Message
 
 	friend	const 
 	std::string&	ToString(Message* _message);
+
+	static
+	Type			ToType(const std::string& _string);
+	static const 
+	std::string&	ToString(Type _type);
 };
 
 struct	MessageStart : Message

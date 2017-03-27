@@ -26,12 +26,12 @@ Device::Properties::Properties(Type _type)
 	ostringstream	buffer;
 	Time			time = Time::GetCurrentTime();
 
-	buffer << time.Microseconds();
-
-	type	=	_type;
-	id		=	"dev-" + buffer.str();
-	name	=	id;
-	enable	=	false;
+	buffer << "dev-" << time.Microseconds();
+ 
+  	type    =       _type;
+  	id      =  	buffer.str();
+  	name    =  	buffer.str();
+  	enable  =	false;
 }
 
 Device::Properties::~Properties()
@@ -102,6 +102,19 @@ Device::Properties*	Device::Properties::Create
 	}
 
 	return	properties;
+}
+
+RetValue Device::Properties::Set
+(
+	Properties* _properties
+)
+{
+	
+	id = _properties->id;
+	name = _properties->name;
+	enable = _properties->enable;
+
+	return	RET_VALUE_OK;
 }
 
 RetValue Device::Properties::Set
@@ -295,6 +308,29 @@ uint32	Device::Properties::GetOptions
 {
 	return	0;
 }
+
+JSONNode	Device::Properties::JSON()
+{
+	JSONNode	root;
+
+	root.push_back(JSONNode("type", Device::TypeToString(type)));
+	root.push_back(JSONNode("id", id));
+	root.push_back(JSONNode("name", name));
+	root.push_back(JSONNode("enable", enable));
+
+	return	root;
+}
+
+JSONNode	Device::Properties::JSON(JSONNode& root)
+{
+	root.push_back(JSONNode("type", Device::TypeToString(type)));
+	root.push_back(JSONNode("id", id));
+	root.push_back(JSONNode("name", name));
+	root.push_back(JSONNode("enable", enable));
+
+	return	root;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////
 // Device Class
 ///////////////////////////////////////////////////////////////////////////////////

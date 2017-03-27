@@ -51,6 +51,8 @@ ifeq ($(LIBS_CYCLING_DEPEND),1)
 else
 	$(CC) -o $@ $< $(LIB_DIRS) $(ALL_LIBS)
 endif
+	@`[ -d $(ROOT_BIN_DIR)/$(OBJS_DIR) ] || $(MKDIR) -p $(ROOT_BIN_DIR)/$(OBJS_DIR)`
+	$(CP) $@ $(ROOT_BIN_DIR)/$(OBJS_DIR)
 
 depend :
 	@`[ -d $(OBJS_DIR) ] || $(MKDIR) $(OBJS_DIR)`

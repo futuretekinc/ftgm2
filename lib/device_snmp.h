@@ -14,14 +14,16 @@ public:
 		char			community[SNMP_COMMUNITY_MAX_LEN + 1];
 	};
 
-	struct	Properties : Device::Properties
+	class	Properties : public Device::Properties
 	{
+	public:
 		std::string	mib;
 		std::string	peer;
 		std::string	community;
 
 					Properties(Type _type = TYPE_SNMP);
 
+		RetValue	Set(Device::Properties* _properties);
 		RetValue 	Set(const JSONNode&	_node);
 		RetValue	Set(Kompex::SQLiteStatement*	_statement);
 
@@ -30,6 +32,9 @@ public:
 		uint32		GetOptionsSize();
 		uint32		GetOptions(uint8_t *options, uint32 options_len);
 		uint32		GetOptions(char *buffer, uint32 buffer_len);
+
+		JSONNode	JSON();
+		JSONNode	JSON(JSONNode& root);
 	};
 
 	// Constructor & Destructor

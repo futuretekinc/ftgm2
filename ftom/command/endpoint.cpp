@@ -280,17 +280,14 @@ RetValue	ShellCommandEndpoint
 		_shell->Out() << setw(16) << "Count" << " : " << count << endl << endl;
 		if (count != 0)
 		{
+			int	i = 0;;
+			list<Value>	value_list;
 
-			TimedValue*	value_list = new TimedValue[count];
-
-			count = endpoint->GetValueList(value_list, count);
-			for(uint32_t i = 0 ; i < count ; i++)
+			for(auto it = value_list.begin() ; it != value_list.end() ; it++)
 			{
-				Time	time = value_list[i].GetTime();
-				_shell->Out() <<  setw(4) << i << " " << time.ToString() << " : " << value_list[i].ToString() << endl;
+				Time	time = it->GetTime();
+				_shell->Out() <<  setw(4) << ++i << " " << time.ToString() << " : " << it->ToString() << endl;
 			}
-
-			delete [] value_list;
 		}
 	}
 	else if (IsCorrectOption(_arguments[1], "enable"))

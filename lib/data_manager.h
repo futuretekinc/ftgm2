@@ -48,7 +48,7 @@ public:
 	RetValue	SetEndpointProperty(const std::string& _id, const std::string& _field, bool _value);
 
 	RetValue	CreateValueTable(const std::string& _id);
-	RetValue	AddValue(const std::string& _id, TimedValue* _value_list, uint32_t _count);
+	RetValue	AddValue(const std::string& _id, Value* _value_list, uint32_t _count);
 	RetValue	GetValueCount(const std::string& _id, uint32_t& _count);
 
 	bool		IsTableExist(const std::string& _name);

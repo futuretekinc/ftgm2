@@ -10,6 +10,7 @@ struct	MessageTypeString
 }
 message_type_string[] =
 {
+	{ Message::TYPE_UNKNOWN,	"Unknown" },
 	{ Message::TYPE_START,		"start"	},
 	{ Message::TYPE_STARTED,	"started"	},
 	{ Message::TYPE_STOP,		"stop"	},
@@ -19,8 +20,7 @@ message_type_string[] =
 	{ Message::TYPE_TEST,		"test"	},
 	{ Message::TYPE_QUIT,		"quit"	},
 	{ Message::TYPE_SESSION_DISCONNECTED, "Session disconnected" },
-	{ Message::TYPE_PACKET_RECEIVED,	"Packet received" },
-	{ Message::TYPE_UNKNOWN,	"Unknown" }
+	{ Message::TYPE_PACKET_RECEIVED,	"Packet received" }
 };
 
 const 
@@ -40,6 +40,40 @@ string&	ToString
 	}
 
 	return	unknown;
+}
+
+
+Message::Type	Message::ToType
+(
+	const std::string& _string
+)
+{
+	for(int i = 0 ; sizeof(message_type_string) / sizeof(MessageTypeString) ; i++)
+	{
+	 	if (_string == message_type_string[i].name)
+		{
+			return	message_type_string[i].type;
+		}
+	}
+
+	return	TYPE_UNKNOWN;
+}
+	
+
+const std::string&	Message::ToString
+(
+	Type _type
+)
+{
+	for(int i = 0 ; sizeof(message_type_string) / sizeof(MessageTypeString) ; i++)
+	{
+	 	if (_type == message_type_string[i].type)
+		{
+			return	message_type_string[i].name;
+		}
+	}
+
+	return	message_type_string[0].name;
 }
 
 MessageTest::MessageTest

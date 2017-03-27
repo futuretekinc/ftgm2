@@ -778,7 +778,7 @@ uint32	Endpoint::ValueCount()
 
 RetValue	Endpoint::AddValue
 (
-	const TimedValue& _value
+	const Value& _value
 )
 {
 	Lock();
@@ -813,13 +813,13 @@ RetValue	Endpoint::DeleteValue
 	return	RET_VALUE_OK;
 }
 
-TimedValue	Endpoint::GetValue()
+Value	Endpoint::GetValue()
 {
-	TimedValue	value;
+	Value	value;
 
 	Lock();
 
-	list<TimedValue>::reverse_iterator	it = value_list_.rbegin();
+	list<Value>::reverse_iterator	it = value_list_.rbegin();
 	if (it != value_list_.rend())
 	{
 		value = (*it);
@@ -830,16 +830,16 @@ TimedValue	Endpoint::GetValue()
 	return	value;
 }
 
-TimedValue	Endpoint::GetValue
+Value	Endpoint::GetValue
 (
 	uint32 _index
 )
 {
-	TimedValue	value;
+	Value	value;
 
 	Lock();
 
-	list<TimedValue>::iterator	it = value_list_.begin();
+	list<Value>::iterator	it = value_list_.begin();
 	if (value_list_.size() > _index)
 	{
 		for(; (_index > 0) && (value_list_.size() > 0) ; _index--, it++)
@@ -856,17 +856,17 @@ TimedValue	Endpoint::GetValue
 		
 uint32	Endpoint::GetValueList
 (
-	TimedValue*	_value_list,
+	list<Value>&	_value_list,
 	uint32	_max_count
 )
 {
 	uint32	count = 0;
 	Lock();
 	
-	list<TimedValue>::iterator	it = value_list_.begin();
+	list<Value>::iterator	it = value_list_.begin();
 	for(; (count < _max_count) && (it != value_list_.end()) ; count++, it++)
 	{
-		_value_list[count] = (*it);
+		_value_list.push_back(*it);
 	}
 	
 	Unlock();

@@ -1110,7 +1110,7 @@ uint32_t	DataManager::GetEndpointCount()
 RetValue	DataManager::AddValue
 (
 	const string&	_id,
-	TimedValue* 	_value_list, 
+	Value* 			_value_list, 
 	uint32_t 		_count
 )
 {
@@ -1121,8 +1121,11 @@ RetValue	DataManager::AddValue
 		for(uint32_t i = 0 ; i < _count ; i++)
 		{
 			ostringstream	query;
+			float			value;
 
-			query << "INSERT INTO " << _id <<" (time, value) Values (" << _value_list[i].GetTime().ToString() << "," << _value_list[i].ToFloat() << ");";
+			_value_list[i].Get(value);
+
+			query << "INSERT INTO " << _id <<" (time, value) Values (" << _value_list[i].GetTime().ToString() << "," << value << ");";
 			INFO(this, "Query : %s", query.str().c_str());
 			try 
 			{

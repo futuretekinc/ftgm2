@@ -1,5 +1,5 @@
 PROJ_ROOT=$(shell pwd)
-SUBDIR=lib ftom
+SUBDIR=lib ftom test
 
 export TOPDIR
 
@@ -23,5 +23,10 @@ depend:
 clean:
 	@for dir in $(SUBDIR); do\
 		make -C $$dir clean;\
+	done
+
+cleanall:
+	@for dir in $(SUBDIR); do\
+		make -C $$dir cleanall;\
 	done
 

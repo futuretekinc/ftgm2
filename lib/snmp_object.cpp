@@ -67,9 +67,10 @@ netsnmp_pdu*	SNMPObject::CreateSetPDU
 	{
 		pdu->time = _timeout;
 
-		if (value_.GetType() == Value::TYPE_INT)
+		if (value_.GetType() == Value::INT)
 		{
-			int	value = value_.ToInt();
+			int	value;
+			value_.Get(value);
 
 			snmp_add_var(pdu, oid_.id, oid_.length, 'i', (char *)&value);
 		}
@@ -83,7 +84,7 @@ netsnmp_pdu*	SNMPObject::CreateSetPDU
 }
 
 const
-TimedValue&		SNMPObject::GetValue()
+Value&		SNMPObject::GetValue()
 {
 	return	value_;
 }
@@ -91,7 +92,7 @@ TimedValue&		SNMPObject::GetValue()
 
 RetValue	SNMPObject::SetValue
 (
-	const TimedValue& _value
+	const Value& _value
 )
 {
 	value_ = _value;
@@ -122,7 +123,7 @@ RetValue	SNMPObject::SetValue
 					default: 	value = 0;
 				}
 
-				value_ = TimedValue(value);
+				value_ = Value(value);
 			}
 			break;
 
@@ -135,7 +136,7 @@ RetValue	SNMPObject::SetValue
 					memcpy(buffer, _variable->val.string, _variable->val_len);
 					buffer[_variable->val_len] = 0;
 
-					value_ = TimedValue(buffer);
+					value_ = Value(buffer);
 				}
 				else
 				{

@@ -44,12 +44,7 @@ RetValue	ShellCommandHelp
 	}
 	else
 	{
-		Device::Properties		*snmp_properties = new DeviceSNMP::Properties;
-		Endpoint::Properties	*endpoint_properties = new EndpointSensor::Properties(Endpoint::TEMPERATURE_SENSOR);
-
-		cout << "SNMP Properties : " << dynamic_cast<DeviceSNMP::Properties*>(snmp_properties) <<endl;
-		cout << "Endpoint Properties : " << dynamic_cast<DeviceSNMP::Properties*>(endpoint_properties) <<endl;
-
+		ret_value = RET_VALUE_NOT_SUPPORTED_FUNCTION;
 	}
 
 	return	ret_value;

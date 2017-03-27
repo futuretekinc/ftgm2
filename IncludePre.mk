@@ -6,10 +6,12 @@ RANLIB = ranlib
 RM = rm
 MKDIR = mkdir
 MAKE = make
+CP = cp
 
 ROOT_SRC_DIR = $(PROJ_ROOT)/src
 ROOT_OUT_DIR = $(PROJ_ROOT)/out
 ROOT_LIB_DIR = $(ROOT_OUT_DIR)/lib
+ROOT_BIN_DIR = $(ROOT_OUT_DIR)/bin
 
 INC_DIRS = -I$(PROJ_ROOT)/Include -I$(PROJ_ROOT)/lib -I/home/xtra/KompexSQLiteWrapper-Source_1.11.13/inc
 

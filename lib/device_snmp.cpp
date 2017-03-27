@@ -20,6 +20,23 @@ DeviceSNMP::Properties::Properties
 
 RetValue DeviceSNMP::Properties::Set
 (
+	Device::Properties*	_properties
+)
+{
+	DeviceSNMP::Properties* properties = dynamic_cast<DeviceSNMP::Properties *>(_properties);
+
+	if (properties != NULL)
+	{
+		peer = properties->peer;
+		community = properties->community;
+		mib = properties->mib;
+	}
+
+	return	Device::Properties::Set(_properties);
+}
+
+RetValue DeviceSNMP::Properties::Set
+(
 	Kompex::SQLiteStatement*	_statement
 )
 {
@@ -173,6 +190,32 @@ uint32	DeviceSNMP::Properties::GetOptions
 	}
 
 	return	0;
+}
+
+JSONNode	DeviceSNMP::Properties::JSON()
+{
+	JSONNode	root;
+
+	Device::Properties::JSON(root);
+
+	root.push_back(JSONNode("peer", peer));
+	root.push_back(JSONNode("community", community));
+	root.push_back(JSONNode("mib", mib));
+	return	root;
+}
+
+JSONNode	DeviceSNMP::Properties::JSON
+(
+	JSONNode& root
+)
+{
+	Device::Properties::JSON(root);
+
+	root.push_back(JSONNode("peer", peer));
+	root.push_back(JSONNode("community", community));
+	root.push_back(JSONNode("mib", mib));
+
+	return	root;
 }
 
 ///////////////////////////////////////////////////////

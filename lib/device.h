@@ -13,6 +13,7 @@
 #include "scheduler.h"
 #include "endpoint.h"
 #include "KompexSQLiteStatement.h"
+#include "properties.h"
 
 class	Device : public MessageProcess
 {
@@ -31,12 +32,13 @@ public:
 		const std::string name;
 	};
 
-	struct Properties
+	class	Properties 
 	{
-		Type			type;
-		std::string		id;
-		std::string		name;
-		bool			enable;
+	public:
+		Type		type;
+		std::string	id;
+		std::string	name;
+		bool		enable;
 
 		std::list<std::string>	endpoint_list;
 
@@ -48,6 +50,8 @@ public:
 		static
 		Properties*	Create(const JSONNode& _node);
 
+		virtual
+		RetValue	Set(Properties* _properties);
 		virtual
 		RetValue	Set(const JSONNode&	node);
 		virtual
@@ -65,6 +69,11 @@ public:
 		uint32		GetOptions(uint8_t *options, uint32 options_len);
 		virtual
 		uint32		GetOptions(char *buffer, uint32 buffer_len);
+
+		virtual		
+		JSONNode	JSON();
+		virtual
+		JSONNode	JSON(JSONNode& root);
 	};
 
 	// Constructor & Destructor

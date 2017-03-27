@@ -29,9 +29,9 @@ public:
 	virtual 
 	RetValue		SetValue(struct variable_list *_variable);
 	virtual 
-	RetValue		SetValue(const TimedValue& _value);
+	RetValue		SetValue(const Value& _value);
 	const
-	TimedValue&		GetValue();
+	Value&			GetValue();
 
 	virtual	
 	netsnmp_pdu*	CreateGetPDU(int _timeout = 5);
@@ -39,8 +39,8 @@ public:
 	netsnmp_pdu*	CreateSetPDU(int _timeout = 5);
 
 protected:
-	OID				oid_;
-	TimedValue		value_;
+	OID			oid_;
+	Value		value_;
 };
 
 #endif
