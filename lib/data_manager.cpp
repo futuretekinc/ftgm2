@@ -1,4 +1,5 @@
 #include <iostream>
+#include <libjson/libjson.h>
 #include "data_manager.h"
 #include "KompexSQLiteException.h"
 #include "trace.h"

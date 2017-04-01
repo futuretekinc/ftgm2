@@ -20,7 +20,7 @@ OBJS_DIR = Release
 DBG_FLAGS = -O2 -DNDEBUG -std=gnu++11
 else
 OBJS_DIR = Debug
-DBG_FLAGS = -g -O0 -DDEBUG -std=gnu++11
+DBG_FLAGS = -g -O0 -DJSON_DEBUG -DDEBUG -std=gnu++11
 endif
 
 DEPEND_FILE = $(OBJS_DIR)/depend_file
